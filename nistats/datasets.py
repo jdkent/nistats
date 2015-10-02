@@ -10,6 +10,9 @@ import glob
 import nibabel
 import urllib2
 from sklearn.datasets.base import Bunch
+import pandas as pd
+import nibabel as nib
+import itertools
 
 from nilearn.datasets.utils import (
     _get_dataset_dir, _fetch_files, _fetch_file, _uncompress_file)
@@ -306,7 +309,8 @@ def fetch_fiac_first_level(data_dir=None, verbose=1):
     return _glob_fiac_data()
 
 
-def fetch_openfmri(data_dir, dataset_id, force_download=False, verbose=1):
+def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
+                   sub_id=1, task_id=1, model_id=1, verbose=1):
     '''Download openfmri datasets.
 
     Currently the openfmri website employs 6 digits for the dataset id in
@@ -321,6 +325,96 @@ def fetch_openfmri(data_dir, dataset_id, force_download=False, verbose=1):
     dataset_id: int
         number of the dataset to download
     '''
+    data_dir = _get_dataset_dir('', data_dir=data_dir, verbose=verbose)
+    dataset_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
+    OPENFMRI_SEP = '\t'
+
+    def _glob_openfmri_data():
+        '''Extracts model from openfmri dataset for given task and subject'''
+        _subject_data = {}
+        onsets_template = os.path.join(dataset_dir,
+                                       'sub{0:03d}'.format(sub_id),
+                                       'model',
+                                       'model{0:03d}'.format(model_id),
+                                       'onsets',
+                                       'task{0:03d}'.format(task_id)+'_run{0}',
+                                       '{1}.txt')
+        condkey_file = os.path.join(dataset_dir, 'models',
+                               'model{0:03d}'.format(model_id),
+                               'condition_key.txt')
+        # Have to infer the separator on condition_key.txt, should be \t.
+        cond_df = pd.read_csv(condkey_file,
+                              sep=' ',
+                              header=None)
+        info_conditions = cond_df[cond_df[0] == 'task{0:03d}'.format(task_id)]
+        conds = info_conditions[1].tolist()
+        conds_name = info_conditions[2].tolist()
+        run_path = os.path.join(dataset_dir, 'sub{0:03d}'.format(sub_id),
+                                'BOLD', 'task{0:03d}_run*'.format(task_id),
+                                'bold.nii.gz')
+        runs = glob.glob(run_path)
+        runs.sort()
+        # Have to infer the separator on scan_key.txt, should be \t.
+        TR = float(open(os.path.join(dataset_dir,
+                                     'scan_key.txt')).read().split(' ')[1])
+        _subject_data['TR'] = TR
+        _run_events = {}
+        all_event_files = []
+
+        for run in runs:
+            names = []
+            allonsets = []
+            alldurations = []
+            event_files = []
+            # This will be used to add dummy events.
+            vol = nib.load(os.path.join(dataset_dir, 'sub{0:03d}', 'BOLD',
+                                        'task{1:03d}_run001', 'bold.nii.gz')
+                           .format(sub_id, task_id)).shape[3]
+            for i in range(len(conds)):
+                names.append(conds_name[i])
+                run_id = run[run.index('run')+3:run.index('run')+6]
+                cond_file = onsets_template.format(run_id, conds[i])
+                event_files.append(cond_file)
+                onsets = []
+                durations = []
+                # ASSUMING WE NEED AT LEAST TWO EVENTS FOR ANY CONDITION
+                if os.stat(cond_file).st_size > 0:
+                    cond_info = pd.read_csv(cond_file,
+                                            sep=OPENFMRI_SEP,
+                                            header=None)
+                    onsets = cond_info[0].tolist()
+                    durations = cond_info[1].tolist()
+                else:
+                    print 'empty file found: ' + cond_file
+                    onsets = [vol*TR - 0.1]
+                    durations = [0.0]
+                allonsets.append(onsets)
+                alldurations.append(durations)
+                n_on = len(list(itertools.chain.from_iterable(allonsets)))
+                n_dur = len(list(itertools.chain.from_iterable(alldurations)))
+                assert(n_on == n_dur)
+
+            _run_events[run_id] = {}
+            _run_events[run_id]['conditions'] = names
+            _run_events[run_id]['onsets'] = allonsets
+            _run_events[run_id]['durations'] = alldurations
+            all_event_files.append(event_files)
+
+        _subject_data['func'] = runs
+        _subject_data['anat'] = os.path.join(dataset_dir,
+                                             'sub{0:03d}'.format(sub_id),
+                                             'anatomy', 'highres001.nii.gz')
+        _subject_data['func_events'] = _run_events
+        _subject_data['onset_files'] = all_event_files
+
+        return _subject_data
+
+    # maybe data_dir already contains the data ?
+    if os.path.exists(dataset_dir):
+        print 'Dataset found'
+        return _glob_openfmri_data()
+
+    # No. Download the data
     def check_link_exist(link):
         try:
             urllib2.urlopen(link)
@@ -330,64 +424,67 @@ def fetch_openfmri(data_dir, dataset_id, force_download=False, verbose=1):
         except urllib2.URLError, e:
             return False
 
-    files = []
-    base_url = 'http://openfmri.s3.amazonaws.com/tarballs/ds{0:03d}{1}_raw{2}.tgz'
-    dataset_links_found = False
-    while(not dataset_links_found):
-        checking_parts_and_groups = True
-        checking_groups = True
-        checking_parts = True
-        group = 'A'
-        part = 1
-        while(checking_parts_and_groups):
-            url = base_url.format(dataset_id, group, '_part%d'%part)
-            if check_link_exist(url):
-                files.append(url)
-                part += 1
-            elif part > 1:
-                part = 1
-                group += 1
-            else:
-                checking_parts_and_groups = False
-                if files:
-                    dataset_links_found = True
+    def explore_posible_urls():
+        files = []
+        base_url = 'http://openfmri.s3.amazonaws.com/tarballs/ds{0:03d}{1}_raw{2}.tgz'
+        dataset_links_found = False
+        while(not dataset_links_found):
+            checking_parts_and_groups = True
+            checking_groups = True
+            checking_parts = True
+            group = 'A'
+            part = 1
+            while(checking_parts_and_groups):
+                url = base_url.format(dataset_id, group, '_part%d'%part)
+                if check_link_exist(url):
+                    files.append(url)
+                    part += 1
+                elif part > 1:
+                    part = 1
+                    group += 1
+                else:
+                    checking_parts_and_groups = False
+                    if files:
+                        dataset_links_found = True
+                        checking_parts = False
+                        checking_groups = False
+            while(checking_parts):
+                url = base_url.format(dataset_id, '', '_part%d'%part)
+                if check_link_exist(url):
+                    files.append(url)
+                    part += 1
+                else:
                     checking_parts = False
+                    if files:
+                        dataset_links_found = True
+                        checking_groups = False
+            group = 'A'
+            while(checking_groups):
+                url = base_url.format(dataset_id, group, '')
+                if check_link_exist(url):
+                    files.append(url)
+                    group += 1
+                else:
                     checking_groups = False
-        while(checking_parts):
-            url = base_url.format(dataset_id, '', '_part%d'%part)
-            if check_link_exist(url):
-                files.append(url)
-                part += 1
-            else:
-                checking_parts = False
-                if files:
-                    dataset_links_found = True
-                    checking_groups = False
-        group = 'A'
-        while(checking_groups):
-            url = base_url.format(dataset_id, group, '')
-            if check_link_exist(url):
-                files.append(url)
-                group += 1
-            else:
-                checking_groups = False
-                if files:
-                    dataset_links_found = True
-        if not files:
-            url = base_url.format(dataset_id, '', '')
-            if check_link_exist(url):
-                files.append(url)
-            else:
-                raise Exception('Can not find dataset %s' % dataset_id)
+                    if files:
+                        dataset_links_found = True
+            if not files:
+                url = base_url.format(dataset_id, '', '')
+                if check_link_exist(url):
+                    files.append(url)
+                else:
+                    raise Exception('Can not find dataset %s' % dataset_id)
+        return files
 
     urls = [('ds{0:03d}'.format(dataset_id), f,
-             {'uncompress':True}) for f in files]
+             {'uncompress':True}) for f in explore_posible_urls()]
     temp_dir = os.path.join(data_dir, '_{0:03d}'.format(dataset_id),
                             'ds{0:03d}'.format(dataset_id))
     output_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
     if not os.path.exists(output_dir) and not force_download:
         _fetch_files(data_dir, urls, verbose=verbose)
-    return output_dir
+
+    return _glob_openfmri_data()
 
 
 def fetch_openfmri2(data_dir, dataset_id, force_download=False, verbose=1):

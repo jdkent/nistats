@@ -46,3 +46,11 @@ def test_fiac():
     assert_true(isinstance(dataset.design_matrix1, _basestring))
     assert_true(isinstance(dataset.design_matrix2, _basestring))
     assert_true(isinstance(dataset.mask, _basestring))
+
+
+def test_fetch_openfmri():
+    dataset = datasets.fetch_openfmri(data_dir=tmpdir, dataset_id=105)
+    assert_true(isinstance(dataset.func[0], _basestring))
+    assert_true(isinstance(dataset.anat, _basestring))
+    assert_true(isinstance(dataset.design_matrix1, _basestring))
+    assert_true(isinstance(dataset.design_matrix2, _basestring))
