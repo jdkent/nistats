@@ -311,7 +311,8 @@ def fetch_openfmri(data_dir, dataset_id, force_download=False, verbose=1):
 
     Currently the openfmri website employs 6 digits for the dataset id in
     the specification, but only 3 digits in the file name to download. So
-    we assume datasets only until 999.
+    we assume datasets only until 999 with download link of the form
+    http://openfmri.s3.amazonaws.com/tarballs/ds[000]{Letter}_raw{_part[0]}.
 
     Parameters
     ----------
