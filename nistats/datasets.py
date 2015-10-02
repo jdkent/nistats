@@ -8,6 +8,7 @@ import os
 import re
 import glob
 import nibabel
+import urllib2
 from sklearn.datasets.base import Bunch
 
 from nilearn.datasets.utils import (
@@ -303,3 +304,123 @@ def fetch_fiac_first_level(data_dir=None, verbose=1):
         return fetch_fiac_first_level(data_dir=data_dir)
 
     return _glob_fiac_data()
+
+
+def fetch_openfmri(data_dir, dataset_id, force_download=False, verbose=1):
+    '''Download openfmri datasets.
+
+    Currently the openfmri website employs 6 digits for the dataset id in
+    the specification, but only 3 digits in the file name to download. So
+    we assume datasets only until 999.
+
+    Parameters
+    ----------
+    data_dir: string
+        directory where data should be downloaded and unpacked
+    dataset_id: int
+        number of the dataset to download
+    '''
+    def check_link_exist(link):
+        try:
+            urllib2.urlopen(link)
+            return True
+        except urllib2.HTTPError, e:
+            return False
+        except urllib2.URLError, e:
+            return False
+
+    files = []
+    base_url = 'http://openfmri.s3.amazonaws.com/tarballs/ds{0:03d}{1}_raw{2}.tgz'
+    dataset_links_found = False
+    while(not dataset_links_found):
+        checking_parts_and_groups = True
+        checking_groups = True
+        checking_parts = True
+        group = 'A'
+        part = 1
+        while(checking_parts_and_groups):
+            url = base_url.format(dataset_id, group, '_part%d'%part)
+            if check_link_exist(url):
+                files.append(url)
+                part += 1
+            elif part > 1:
+                part = 1
+                group += 1
+            else:
+                checking_parts_and_groups = False
+                if files:
+                    dataset_links_found = True
+                    checking_parts = False
+                    checking_groups = False
+        while(checking_parts):
+            url = base_url.format(dataset_id, '', '_part%d'%part)
+            if check_link_exist(url):
+                files.append(url)
+                part += 1
+            else:
+                checking_parts = False
+                if files:
+                    dataset_links_found = True
+                    checking_groups = False
+        group = 'A'
+        while(checking_groups):
+            url = base_url.format(dataset_id, group, '')
+            if check_link_exist(url):
+                files.append(url)
+                group += 1
+            else:
+                checking_groups = False
+                if files:
+                    dataset_links_found = True
+        if not files:
+            url = base_url.format(dataset_id, '', '')
+            if check_link_exist(url):
+                files.append(url)
+            else:
+                raise Exception('Can not find dataset %s' % dataset_id)
+
+    urls = [('ds{0:03d}'.format(dataset_id), f,
+             {'uncompress':True}) for f in files]
+    temp_dir = os.path.join(data_dir, '_{0:03d}'.format(dataset_id),
+                            'ds{0:03d}'.format(dataset_id))
+    output_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
+    if not os.path.exists(output_dir) and not force_download:
+        _fetch_files(data_dir, urls, verbose=verbose)
+    return output_dir
+
+
+def fetch_openfmri2(data_dir, dataset_id, force_download=False, verbose=1):
+    files = {
+        'ds001': ['ds001_raw'],
+        'ds002': ['ds002_raw'],
+        'ds003': ['ds003_raw'],
+        'ds005': ['ds005_raw'],
+        'ds006A': ['ds006A_raw'],
+        'ds007': ['ds007_raw'],
+        'ds008': ['ds008_raw'],
+        'ds011': ['ds011_raw'],
+        'ds017A': ['ds017A_raw'],
+        'ds017B': ['ds017B_raw'],
+        'ds051': ['ds051_raw'],
+        'ds052': ['ds052_raw'],
+        'ds101': ['ds101_raw'],
+        'ds102': ['ds102_raw'],
+        'ds105': ['ds105_raw'],
+        'ds107': ['ds107_raw'],
+        'ds108': ['ds108_raw_part1', 'ds108_raw_part2', 'ds108_raw_part3'],
+        'ds109': ['ds109_raw'],
+        'ds110': ['ds110_raw_part1', 'ds110_raw_part2', 'ds110_raw_part3',
+                  'ds110_raw_part4', 'ds110_raw_part5', 'ds110_raw_part6']
+        }
+
+    if dataset_id not in files:
+        raise Exception('Unknown dataset %s' % dataset_id)
+
+    base_url = 'http://openfmri.s3.amazonaws.com/tarballs/%s.tgz'
+    urls = [(dataset_id, base_url % f, {'uncompress':True}) for f in files[dataset_id]]
+    temp_dir = os.path.join(data_dir, '_%s' % dataset_id, dataset_id)
+    output_dir = os.path.join(data_dir, dataset_id)
+    print data_dir, urls
+    if not os.path.exists(output_dir) and not force_download:
+        _fetch_files(data_dir, urls, verbose=verbose)
+    return output_dir
