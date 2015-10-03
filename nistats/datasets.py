@@ -327,7 +327,9 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
     '''
     data_dir = _get_dataset_dir('', data_dir=data_dir, verbose=verbose)
     dataset_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
-    OPENFMRI_SEP = '\t'
+    ONSETS_FILE_SEP = '\t'
+    OTHER_FILE_SEP = ' '
+
 
     def _glob_openfmri_data():
         '''Extracts model from openfmri dataset for given task and subject'''
@@ -340,11 +342,10 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
                                        'task{0:03d}'.format(task_id)+'_run{0}',
                                        '{1}.txt')
         condkey_file = os.path.join(dataset_dir, 'models',
-                               'model{0:03d}'.format(model_id),
-                               'condition_key.txt')
-        # Have to infer the separator on condition_key.txt, should be \t.
+                                    'model{0:03d}'.format(model_id),
+                                    'condition_key.txt')
         cond_df = pd.read_csv(condkey_file,
-                              sep=' ',
+                              sep=OTHER_FILE_SEP,
                               header=None)
         info_conditions = cond_df[cond_df[0] == 'task{0:03d}'.format(task_id)]
         conds = info_conditions[1].tolist()
@@ -354,9 +355,8 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
                                 'bold.nii.gz')
         runs = glob.glob(run_path)
         runs.sort()
-        # Have to infer the separator on scan_key.txt, should be \t.
         TR = float(open(os.path.join(dataset_dir,
-                                     'scan_key.txt')).read().split(' ')[1])
+                                     'scan_key.txt')).read().split(OTHER_FILE_SEP)[1])
         _subject_data['TR'] = TR
         _run_events = {}
         all_event_files = []
@@ -380,7 +380,7 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
                 # ASSUMING WE NEED AT LEAST TWO EVENTS FOR ANY CONDITION
                 if os.stat(cond_file).st_size > 0:
                     cond_info = pd.read_csv(cond_file,
-                                            sep=OPENFMRI_SEP,
+                                            sep=ONSETS_FILE_SEP,
                                             header=None)
                     onsets = cond_info[0].tolist()
                     durations = cond_info[1].tolist()
@@ -407,7 +407,7 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
         _subject_data['func_events'] = _run_events
         _subject_data['onset_files'] = all_event_files
 
-        return _subject_data
+        return Bunch(**_subject_data)
 
     # maybe data_dir already contains the data ?
     if os.path.exists(dataset_dir):
@@ -435,7 +435,7 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
             group = 'A'
             part = 1
             while(checking_parts_and_groups):
-                url = base_url.format(dataset_id, group, '_part%d'%part)
+                url = base_url.format(dataset_id, group, '_part%d' % part)
                 if check_link_exist(url):
                     files.append(url)
                     part += 1
@@ -449,7 +449,7 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
                         checking_parts = False
                         checking_groups = False
             while(checking_parts):
-                url = base_url.format(dataset_id, '', '_part%d'%part)
+                url = base_url.format(dataset_id, '', '_part%d' % part)
                 if check_link_exist(url):
                     files.append(url)
                     part += 1
@@ -477,9 +477,7 @@ def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
         return files
 
     urls = [('ds{0:03d}'.format(dataset_id), f,
-             {'uncompress':True}) for f in explore_posible_urls()]
-    temp_dir = os.path.join(data_dir, '_{0:03d}'.format(dataset_id),
-                            'ds{0:03d}'.format(dataset_id))
+             {'uncompress': True}) for f in explore_posible_urls()]
     output_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
     if not os.path.exists(output_dir) and not force_download:
         _fetch_files(data_dir, urls, verbose=verbose)
