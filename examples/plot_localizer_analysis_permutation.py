@@ -2,8 +2,8 @@
 GLM fitting in fMRI
 ===================
 
-Full step-by-step example of fitting a GLM to experimental data and visualizing
-the results.
+Full step-by-step example of fitting a GLM to experimental data realizing
+permutation tests and visualizing the results.
 
 More specifically:
 
@@ -12,6 +12,8 @@ More specifically:
 3. a mask of the useful brain volume is computed
 4. A GLM is applied to the dataset (effect/covariance,
    then contrast estimation)
+5. Permutation tests are performed to obtain uncorrected and corrected p values
+at each voxel for a contrast comparing only two conditions.
 
 """
 
