@@ -149,10 +149,6 @@ def first_level_permutation_test(contrasts, glm_ref, imgs,
     """Estimate uncorrected and FWE corrected p-values for voxel activation and
     cluster size.
 
-    Caches voxel t distributions, whole brain max t distribution and whole
-    brain max cluster size distribution if desired to quickly apply arbitrary
-    thresholding to contrasts.
-
     Parameters
     ----------
     contrasts: dict with string as key and list of float as value,
