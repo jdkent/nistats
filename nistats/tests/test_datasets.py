@@ -49,8 +49,5 @@ def test_fiac():
 
 
 def test_fetch_openfmri():
-    dataset = datasets.fetch_openfmri(data_dir=tmpdir, dataset_id=105)
-    assert_true(isinstance(dataset.func[0], _basestring))
-    assert_true(isinstance(dataset.anat, _basestring))
-    assert_true(isinstance(dataset.design_matrix1, _basestring))
-    assert_true(isinstance(dataset.design_matrix2, _basestring))
+    output_dir = datasets.fetch_openfmri(data_dir=tmpdir, dataset_id=105)
+    assert_true(isinstance(output_dir, _basestring))
