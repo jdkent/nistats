@@ -29,6 +29,8 @@ def fetch_localizer_first_level(data_dir=None, verbose=1):
     ----------
     data_dir: string
         directory where data should be downloaded and unpacked.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
 
     Returns
     -------
@@ -66,6 +68,12 @@ def fetch_spm_auditory(data_dir=None, data_name='spm_auditory',
         Path of the data directory. Used to force data storage in a specified
         location. If the data is already present there, then will simply
         glob it.
+    data_name: string. Default is 'spm_auditory'.
+        name to give to downloaded dataset folder.
+    subject_id: string. Default is 'sub001'
+        subject data to return.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
 
     Returns
     -------
@@ -158,6 +166,12 @@ def fetch_spm_multimodal_fmri(data_dir=None, data_name="spm_multimodal_fmri",
         path of the data directory. Used to force data storage in a specified
         location. If the data is already present there, then will simply
         glob it.
+    data_name: string. Default is 'spm_multimodal_fmri'.
+        name to give to downloaded dataset folder.
+    subject_id: string. Default is 'sub001'
+        subject data to return.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
 
     Returns
     -------
@@ -256,6 +270,23 @@ def fetch_fiac_first_level(data_dir=None, verbose=1):
     ----------
     data_dir: string
         directory where data should be downloaded and unpacked.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
+
+    Returns
+    -------
+    data: sklearn.datasets.base.Bunch
+        Dictionary-like object, the interest attributes are:
+        - 'func1': string list. Paths to functional images session 1
+        - 'func2': string list. Paths to functional images session 2
+        - 'designmatrix1': string list. Paths to design matrix session 1
+        - 'designmatrix2': string list. Paths to design matrix session 2
+        - 'mask': string list. Path to mask
+
+    References
+    ----------
+    :docs:
+        https://github.com/nipy/nipy/tree/master/examples/fiac
     """
     data_dir = _get_dataset_dir('', data_dir=data_dir, verbose=verbose)
 
@@ -309,183 +340,121 @@ def fetch_fiac_first_level(data_dir=None, verbose=1):
     return _glob_fiac_data()
 
 
-def fetch_openfmri(data_dir=None, dataset_id=105, force_download=False,
-                   sub_id=1, task_id=1, model_id=1, verbose=1):
-    '''Download openfmri datasets.
+def fetch_openfmri_dataset(dataset_id='ds001', data_dir=None,
+                           force_download=False, verbose=1):
+    """Download openfmri datasets.
 
-    Currently the openfmri website employs 6 digits for the dataset id in
-    the specification, but only 3 digits in the file name to download. So
-    we assume datasets only until 999 with download link of the form
-    http://openfmri.s3.amazonaws.com/tarballs/ds[000]{Letter}_raw{_part[0]}.
+    Check https://openfmri.org/ for more information on available datasets.
+
+    Datasets included here for download: ds001, ds002, ds003, ds005, ds006A,
+    ds007, ds008, ds011, ds017A, ds017B, ds051, ds052, ds101, ds102, ds105,
+    ds107, ds108, ds109, ds110.
 
     Parameters
     ----------
-    data_dir: string
-        directory where data should be downloaded and unpacked
-    dataset_id: int
-        number of the dataset to download
-    '''
+    dataset_id: string. Default is 'ds001'.
+        id of the dataset to download.
+        Datasets that can be downloaded: ds001, ds002, ds003, ds005, ds006A,
+        ds007, ds008, ds011, ds017A, ds017B, ds051, ds052, ds101, ds102, ds105,
+        ds107, ds108, ds109, ds110.
+        For more datasets and information on the openfmri format please visit:
+        https://openfmri.org/dataset/
+    data_dir: string. Default is None.
+        directory where data should be downloaded and unpacked. If None will
+        download to the nilearn default download directory.
+    force_download: boolean. Default is False.
+        flag to indicate the dataset should be redownloaded, even if already
+        on disk.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
+
+    Returns
+    -------
+    output_dir: string.
+        directory of downloaded dataset
+
+    References
+    ----------
+    :download:
+        https://openfmri.org/
+    """
     data_dir = _get_dataset_dir('', data_dir=data_dir, verbose=verbose)
-    dataset_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
-    ONSETS_FILE_SEP = '\t'
-    OTHER_FILE_SEP = ' '
 
+    datasets = {
+        'ds001': ['ds001_raw'],
+        'ds002': ['ds002_raw'],
+        'ds003': ['ds003_raw'],
+        'ds005': ['ds005_raw'],
+        'ds006A': ['ds006A_raw'],
+        'ds007': ['ds007_raw'],
+        'ds008': ['ds008_raw'],
+        'ds011': ['ds011_raw'],
+        'ds017A': ['ds017A_raw'],
+        'ds017B': ['ds017B_raw'],
+        'ds051': ['ds051_raw'],
+        'ds052': ['ds052_raw'],
+        'ds101': ['ds101_raw'],
+        'ds102': ['ds102_raw'],
+        'ds105': ['ds105_raw'],
+        'ds107': ['ds107_raw'],
+        'ds108': ['ds108_raw_part1', 'ds108_raw_part2', 'ds108_raw_part3'],
+        'ds109': ['ds109_raw'],
+        'ds110': ['ds110_raw_part1', 'ds110_raw_part2', 'ds110_raw_part3',
+                  'ds110_raw_part4', 'ds110_raw_part5', 'ds110_raw_part6']
+        }
 
-    def _glob_openfmri_data():
-        '''Extracts model from openfmri dataset for given task and subject'''
-        _subject_data = {}
-        onsets_template = os.path.join(dataset_dir,
-                                       'sub{0:03d}'.format(sub_id),
-                                       'model',
-                                       'model{0:03d}'.format(model_id),
-                                       'onsets',
-                                       'task{0:03d}'.format(task_id)+'_run{0}',
-                                       '{1}.txt')
-        condkey_file = os.path.join(dataset_dir, 'models',
-                                    'model{0:03d}'.format(model_id),
-                                    'condition_key.txt')
-        cond_df = pd.read_csv(condkey_file,
-                              sep=OTHER_FILE_SEP,
-                              header=None)
-        info_conditions = cond_df[cond_df[0] == 'task{0:03d}'.format(task_id)]
-        conds = info_conditions[1].tolist()
-        conds_name = info_conditions[2].tolist()
-        run_path = os.path.join(dataset_dir, 'sub{0:03d}'.format(sub_id),
-                                'BOLD', 'task{0:03d}_run*'.format(task_id),
-                                'bold.nii.gz')
-        runs = glob.glob(run_path)
-        runs.sort()
-        TR = float(open(os.path.join(dataset_dir,
-                                     'scan_key.txt')).read().split(OTHER_FILE_SEP)[1])
-        _subject_data['TR'] = TR
-        _run_events = {}
-        all_event_files = []
+    if dataset_id not in datasets:
+        raise Exception('Unknown dataset %s' % dataset_id)
 
-        for run in runs:
-            names = []
-            allonsets = []
-            alldurations = []
-            event_files = []
-            # This will be used to add dummy events.
-            vol = nib.load(os.path.join(dataset_dir, 'sub{0:03d}', 'BOLD',
-                                        'task{1:03d}_run001', 'bold.nii.gz')
-                           .format(sub_id, task_id)).shape[3]
-            for i in range(len(conds)):
-                names.append(conds_name[i])
-                run_id = run[run.index('run')+3:run.index('run')+6]
-                cond_file = onsets_template.format(run_id, conds[i])
-                event_files.append(cond_file)
-                onsets = []
-                durations = []
-                # ASSUMING WE NEED AT LEAST TWO EVENTS FOR ANY CONDITION
-                if os.stat(cond_file).st_size > 0:
-                    cond_info = pd.read_csv(cond_file,
-                                            sep=ONSETS_FILE_SEP,
-                                            header=None)
-                    onsets = cond_info[0].tolist()
-                    durations = cond_info[1].tolist()
-                else:
-                    print 'empty file found: ' + cond_file
-                    onsets = [vol*TR - 0.1]
-                    durations = [0.0]
-                allonsets.append(onsets)
-                alldurations.append(durations)
-                n_on = len(list(itertools.chain.from_iterable(allonsets)))
-                n_dur = len(list(itertools.chain.from_iterable(alldurations)))
-                assert(n_on == n_dur)
-
-            _run_events[run_id] = {}
-            _run_events[run_id]['conditions'] = names
-            _run_events[run_id]['onsets'] = allonsets
-            _run_events[run_id]['durations'] = alldurations
-            all_event_files.append(event_files)
-
-        _subject_data['func'] = runs
-        _subject_data['anat'] = os.path.join(dataset_dir,
-                                             'sub{0:03d}'.format(sub_id),
-                                             'anatomy', 'highres001.nii.gz')
-        _subject_data['func_events'] = _run_events
-        _subject_data['onset_files'] = all_event_files
-
-        return Bunch(**_subject_data)
-
-    # maybe data_dir already contains the data ?
-    if os.path.exists(dataset_dir):
-        print 'Dataset found'
-        return _glob_openfmri_data()
-
-    # No. Download the data
-    def check_link_exist(link):
-        try:
-            urllib2.urlopen(link)
-            return True
-        except urllib2.HTTPError, e:
-            return False
-        except urllib2.URLError, e:
-            return False
-
-    def explore_posible_urls():
-        files = []
-        base_url = 'http://openfmri.s3.amazonaws.com/tarballs/ds{0:03d}{1}_raw{2}.tgz'
-        dataset_links_found = False
-        while(not dataset_links_found):
-            checking_parts_and_groups = True
-            checking_groups = True
-            checking_parts = True
-            group = 'A'
-            part = 1
-            while(checking_parts_and_groups):
-                url = base_url.format(dataset_id, group, '_part%d' % part)
-                if check_link_exist(url):
-                    files.append(url)
-                    part += 1
-                elif part > 1:
-                    part = 1
-                    group += 1
-                else:
-                    checking_parts_and_groups = False
-                    if files:
-                        dataset_links_found = True
-                        checking_parts = False
-                        checking_groups = False
-            while(checking_parts):
-                url = base_url.format(dataset_id, '', '_part%d' % part)
-                if check_link_exist(url):
-                    files.append(url)
-                    part += 1
-                else:
-                    checking_parts = False
-                    if files:
-                        dataset_links_found = True
-                        checking_groups = False
-            group = 'A'
-            while(checking_groups):
-                url = base_url.format(dataset_id, group, '')
-                if check_link_exist(url):
-                    files.append(url)
-                    group += 1
-                else:
-                    checking_groups = False
-                    if files:
-                        dataset_links_found = True
-            if not files:
-                url = base_url.format(dataset_id, '', '')
-                if check_link_exist(url):
-                    files.append(url)
-                else:
-                    raise Exception('Can not find dataset %s' % dataset_id)
-        return files
-
-    urls = [('ds{0:03d}'.format(dataset_id), f,
-             {'uncompress': True}) for f in explore_posible_urls()]
-    output_dir = os.path.join(data_dir, 'ds{0:03d}'.format(dataset_id))
+    base_url = 'http://openfmri.s3.amazonaws.com/tarballs/%s.tgz'
+    urls = [(dataset_id, base_url % f, {'uncompress':True}) for f in datasets[dataset_id]]
+    temp_dir = os.path.join(data_dir, '_%s' % dataset_id, dataset_id)
+    output_dir = os.path.join(data_dir, dataset_id)
+    print data_dir, urls
     if not os.path.exists(output_dir) and not force_download:
         _fetch_files(data_dir, urls, verbose=verbose)
+    return output_dir
 
-    return _glob_openfmri_data()
 
+def fetch_bids_dataset(dataset_id='ds001', data_dir=None, force_download=False,
+                       verbose=1):
+    """Download bids datasets.
 
-def fetch_openfmri2(data_dir, dataset_id, force_download=False, verbose=1):
+    Check http://bids.neuroimaging.io/ for more information on available
+    datasets.
+
+    Datasets included here for download: ds001, ds002, ds003, ds005, ds006,
+    ds007, ds008, ds009, ds011, ds051, ds052, ds101, ds102, ds105,
+    ds107, ds108, ds109, ds110.
+
+    Parameters
+    ----------
+    dataset_id: string. Default is 'ds001'.
+        id of the dataset to download.
+        Datasets that can be downloaded: ds001, ds002, ds003, ds005, ds006,
+        ds007, ds008, ds009, ds011, ds051, ds052, ds101, ds102, ds105, ds107,
+        ds108, ds109, ds110.
+        For more datasets and information on the openfmri format please visit:
+        https://openfmri.org/dataset/
+    data_dir: string. Default is None.
+        directory where data should be downloaded and unpacked. If None will
+        download to the nilearn default download directory.
+    force_download: boolean. Default is False.
+        flag to indicate the dataset should be redownloaded, even if already
+        on disk.
+    verbose: int. Default is 1.
+        Controls the amount of logging.
+
+    Returns
+    -------
+    output_dir: string.
+        directory of downloaded dataset
+
+    References
+    ----------
+    :download:
+        http://bids.neuroimaging.io/
+    """
     files = {
         'ds001': ['ds001_raw'],
         'ds002': ['ds002_raw'],
@@ -512,8 +481,9 @@ def fetch_openfmri2(data_dir, dataset_id, force_download=False, verbose=1):
     if dataset_id not in files:
         raise Exception('Unknown dataset %s' % dataset_id)
 
-    base_url = 'http://openfmri.s3.amazonaws.com/tarballs/%s.tgz'
-    urls = [(dataset_id, base_url % f, {'uncompress':True}) for f in files[dataset_id]]
+    base_url = 'https://www.googleapis.com/drive/v3/files/0B2JWN60ZLkgkQjEzVGtqdHcwaTg'
+    urls = [(dataset_id, base_url, {'uncompress':True})]
+    # urls = [(dataset_id, base_url % f, {'uncompress':True}) for f in files[dataset_id]]
     temp_dir = os.path.join(data_dir, '_%s' % dataset_id, dataset_id)
     output_dir = os.path.join(data_dir, dataset_id)
     print data_dir, urls
