@@ -269,7 +269,7 @@ def make_design_matrix(
         The timing of the scans in seconds.
 
     paradigm : DataFrame instance, optional
-        Description of the experimental paradigm.
+        Description of the experimental paradigm. With one row per event.
 
     hrf_model : string, optional,
         Specifies the hemodynamic response function (HRF).
