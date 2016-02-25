@@ -136,13 +136,12 @@ def _openfrmri_contrasts(ref_design_matrix, dataset_dir, model_id, task_id):
     return contrasts
 
 # dataset parameters
-dataset_dir = os.path.join('dataset_download')
 sub_id = 1
 model_id = 1
 task_id = 1
 
 # download openfmri dataset
-dataset_dir = fetch_openfmri_dataset(dataset_id='ds001', data_dir=dataset_dir)
+dataset_dir = fetch_openfmri_dataset(dataset_id='ds001')
 
 # fetch openfmri dataset
 data = _glob_openfmri_data(dataset_dir, sub_id, model_id, task_id)
