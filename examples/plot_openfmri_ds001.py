@@ -24,6 +24,8 @@ from nistats.datasets import fetch_openfmri_dataset
 # openfmri dataset extraction
 OPENFMRI_SEP = '\t'
 OTHER_FILE_SEP = ' '
+
+
 def _glob_openfmri_data(dataset_dir, sub_id, model_id, task_id):
     '''Extracts model from openfmri dataset for given task and subject'''
     _subject_data = {}
@@ -32,7 +34,7 @@ def _glob_openfmri_data(dataset_dir, sub_id, model_id, task_id):
                                    'model',
                                    'model{0:03d}'.format(model_id),
                                    'onsets',
-                                   'task{0:03d}'.format(task_id)+'_run{0}',
+                                   'task{0:03d}'.format(task_id) + '_run{0}',
                                    '{1}.txt')
     condkey_file = os.path.join(dataset_dir, 'models',
                                 'model{0:03d}'.format(model_id),
@@ -48,8 +50,8 @@ def _glob_openfmri_data(dataset_dir, sub_id, model_id, task_id):
                             'bold.nii.gz')
     runs = glob.glob(run_path)
     runs.sort()
-    TR = float(open(os.path.join(dataset_dir,
-                                 'scan_key.txt')).read().split(OTHER_FILE_SEP)[1])
+    TR = float(open(os.path.join(dataset_dir, 'scan_key.txt'))
+               .read().split(OTHER_FILE_SEP)[1])
     _run_events = {}
     all_event_files = []
 
@@ -102,6 +104,7 @@ def _glob_openfmri_data(dataset_dir, sub_id, model_id, task_id):
 
     return Bunch(**_subject_data)
 
+
 def _openfrmri_contrasts(ref_design_matrix, dataset_dir, model_id, task_id):
     # Build basic contrast_matrix.
     contrast_matrix = np.eye(ref_design_matrix.shape[1])
@@ -117,7 +120,6 @@ def _openfrmri_contrasts(ref_design_matrix, dataset_dir, model_id, task_id):
                           sep=OTHER_FILE_SEP,
                           header=None)
     info_conditions = cond_df[cond_df[0] == task]
-    conds = info_conditions[1].tolist()
     conds_name = info_conditions[2].tolist()
     contrasts_file = os.path.join(dataset_dir, 'models',
                                   'model{0:03d}'.format(model_id),
