@@ -22,6 +22,23 @@ def fdr_threshold(z_vals, alpha):
         return np.infty
 
 
+def infer_threshold(stats, threshold=0.001, height_control='fpr'):
+    """ Infer appropirate statistical threshold"""
+    n_voxels = np.size(stats)
+
+    # Thresholding
+    if height_control == 'fpr':
+        z_th = norm.isf(threshold)
+    elif height_control == 'fdr':
+        z_th = fdr_threshold(stats, threshold)
+    elif height_control == 'bonferroni':
+        z_th = norm.isf(threshold / n_voxels)
+    else:  # Brute-force thresholding
+        z_th = threshold
+
+    return z_th
+
+
 def map_threshold(stat_img, mask_img=None, threshold=.001,
                   height_control='fpr', cluster_threshold=0):
     """ Threshold the provided map
@@ -48,7 +65,7 @@ def map_threshold(stat_img, mask_img=None, threshold=.001,
     -------
     thresholded_map : Nifti1Image,
         the stat_map theresholded at the prescribed voxel- and cluster-level
-        
+
     threshold: float,
         the voxel-level threshold used actually
     """
@@ -58,17 +75,7 @@ def map_threshold(stat_img, mask_img=None, threshold=.001,
     else:
         masker = NiftiMasker(mask_img=mask_img).fit()
     stats = np.ravel(masker.transform(stat_img))
-    n_voxels = np.size(stats)
-
-    # Thresholding
-    if height_control == 'fpr':
-        z_th = norm.isf(threshold)
-    elif height_control == 'fdr':
-        z_th = fdr_threshold(stats, threshold)
-    elif height_control == 'bonferroni':
-        z_th = norm.isf(threshold / n_voxels)
-    else:  # Brute-force thresholding
-        z_th = threshold
+    z_th = infer_threshold(stats, threshold, height_control)
     stats *= (stats > z_th)
 
     # embed it back to 3D grid
