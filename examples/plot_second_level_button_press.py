@@ -62,13 +62,33 @@ second_level_model = SecondLevelModel(smoothing_fwhm=8.0)
 second_level_model = second_level_model.fit(second_level_input,
                                             design_matrix=design_matrix)
 
-##########################################################################
+#########################################################################
+# Estimate uncorrected effects
+# --------------------------------
 # To estimate the contrast is very simple. We can just provide the column
 # name of the design matrix.
 z_map = second_level_model.compute_contrast(output_type='z_score')
 
-###########################################################################
-# We threshold the second level contrast at uncorrected p < 0.001 and plot
+#########################################################################
+# We threshold the contrast at uncorrected p < 0.001 and plot
+p_val = 0.001
+z_th = norm.isf(p_val)
+display = plotting.plot_glass_brain(z_map, threshold=z_th, colorbar=True,
+                                    plot_abs=False, display_mode='z')
+
+plotting.show()
+
+#########################################################################
+# Estimate FWE corrected effects with permutation test
+# ----------------------------------------------------
+# We use a similar function that also allows to tune the permutation
+# parameters. For this example we will only use 1000 permutations. But we
+# recommend to use 10000.
+z_map = second_level_model.compute_contrast_permutations(
+    output_type='cor_z_score')
+
+#########################################################################
+# We threshold the contrast at corrected p < 0.001 and plot
 p_val = 0.001
 z_th = norm.isf(p_val)
 display = plotting.plot_glass_brain(
