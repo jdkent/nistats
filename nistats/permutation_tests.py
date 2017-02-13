@@ -17,6 +17,7 @@ from .thresholding import infer_threshold
 
 def _maxstat_thresholding(stats, masker, threshold=0.001,
                           height_control='fpr'):
+    """Compute max cluster size and max cluster mass."""
     z_th = infer_threshold(stats, threshold, height_control)
 
     # Embed stats back to 3D grid
@@ -39,6 +40,7 @@ def _maxstat_thresholding(stats, masker, threshold=0.001,
 
 
 def _original_stat(Y, design_matrix, con_val, stat_type, n_jobs=1):
+    """Return original statistic."""
     labels, results = run_glm(Y, design_matrix.as_matrix(),
                               n_jobs=n_jobs, noise_model='ols')
     contrast = compute_contrast(labels, results, con_val, stat_type)
@@ -87,6 +89,14 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         Distribution of the (max) t-statistic under the null hypothesis
         (limited to this permutation chunk).
 
+    cs_max_parts: array-like, shape=(n_perm_chunk, ):
+        Distribution of the (max) cluster size. Limited to this permutation
+        chunk.
+
+    cm_max_parts: array-like, shape=(n_perm_chunk, ):
+        Distribution of the (max) cluster mass. Limited to this permutation
+        chunk.
+
     References
     ----------
     [1] Nichols, T. E., & Holmes, A. P. (2002). Nonparametric permutation
@@ -100,8 +110,8 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     # cluster mass
     unc_rank_parts = np.zeros(len(original_stat))
     smax_parts = np.empty((n_perm_chunk))
-    csmax_parts = np.empty((n_perm_chunk))
-    cmmax_parts = np.empty((n_perm_chunk))
+    cs_max_parts = np.empty((n_perm_chunk))
+    cm_max_parts = np.empty((n_perm_chunk))
 
     # Avoid recomputing sign flips
     n_imgs = Y.shape[0]
@@ -137,8 +147,8 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         # Get cluster stats
         csmax, cmmax = _maxstat_thresholding(permuted_stat, masker,
                                              threshold, height_control)
-        csmax_parts[perm] = csmax
-        cmmax_parts[perm] = cmmax
+        cs_max_parts[perm] = csmax
+        cm_max_parts[perm] = cmmax
 
         if verbose > 0:
             # We print every 10 permutations or more often
@@ -160,7 +170,7 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
                     % (thread_id, i, n_perm_chunk, con_val, percent, remaining,
                        crlf))
 
-    return unc_rank_parts, smax_parts, csmax_parts, cmmax_parts
+    return unc_rank_parts, smax_parts, cs_max_parts, cm_max_parts
 
 
 def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
@@ -218,12 +228,17 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     Returns
     -------
-    contrast_results: dict with string as key and tuple of two Nifti1File
-        objects as value. The key is the contrast name and the first
-        nifti file contains the uncorrected p values derived from the
-        permutations at the voxel level, while the second nifti file contains
-        the corrected p values derived from the permutations whole brain max
-        statistic.
+    unc_pvals: array-like, shape=(n_voxels)
+        Uncorrected p values based on a voxel wise statistic of permutations.
+
+    cor_pvals : array-like, shape=(n_voxels)
+        FWE corrected p values based on max statistic of permutations.
+
+    cs_max_parts: array-like, shape=(n_perm):
+        Distribution of the (max) cluster size.
+
+    cm_max_parts: array-like, shape=(n_perm):
+        Distribution of the (max) cluster mass.
     """
     # check n_jobs (number of CPUs)
     if n_jobs == 0:  # invalid according to joblib's conventions
@@ -254,7 +269,7 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
                       'resources.' % (n_perm, n_jobs, n_perm))
         n_perm_chunks = np.ones(n_perm, dtype=int)
 
-    # Compute original stat only once
+    # Compute original stat and clusters only once
     original_stat = _original_stat(Y, design_matrix, con_val, stat_type,
                                    n_jobs)
 
@@ -271,7 +286,7 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
             n_perm=n_perm, thread_id=thread_id, verbose=verbose)
         for thread_id, n_perm_chunk in enumerate(n_perm_chunks))
 
-    unc_rank_parts, smax_parts, csmax_parts, cmmax_parts = zip(*per)
+    unc_rank_parts, smax_parts, cs_max_parts, cm_max_parts = zip(*per)
 
     # Get uncorrected p-values
     unc_rank = np.zeros(len(original_stat))
@@ -291,4 +306,9 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     cor_pvals = (n_perm + 1 - cor_ranks) / float(1 + n_perm)
 
-    return unc_pvals, cor_pvals
+    # Get max cluster size distribution
+    cs_max_dist = np.concatenate(cs_max_parts)
+    # Get max cluster mass distribution
+    cm_max_dist = np.concatenate(cm_max_parts)
+
+    return unc_pvals, cor_pvals, cs_max_dist, cm_max_dist
