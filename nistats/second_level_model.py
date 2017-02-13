@@ -25,7 +25,7 @@ from .first_level_model import FirstLevelModel
 from .first_level_model import run_glm
 from .regression import SimpleRegressionResults
 from .contrasts import compute_contrast
-from .utils import _basestring
+from .utils import _basestring, z_score
 from .design_matrix import create_second_level_design
 from .permutation_tests import second_level_permutation
 
@@ -426,7 +426,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
     def compute_contrast_permutations(
             self, contrast_def='contrast', first_level_contrast=None,
-            stat_type=None, output_type='cor_p_value', threshold=0.001,
+            stat_type=None, output_type='cor_z_score', threshold=0.001,
             height_control='fpr', two_sided_test=True, n_perm=10000,
             random_state=None):
         """Generate different permutation test outputs corresponding to
@@ -455,8 +455,10 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             Type of the contrast
 
         output_type: str, optional
-            Type of the output map. Can be 'unc_p_value', 'cor_p_value',
-            'cluster_size_p_value' or 'cluster_mass_p_value'
+            Type of the output map. Can be 'unc_p_value', 'unc_z_score',
+            'cor_p_value', 'cor_z_score', 'cluster_size_p_value',
+            'cluster_size_z_score', 'cluster_mass_p_value' or
+            'cluster_mass_z_score'
 
         threshold: float, optional
             cluster forming threshold (either a p-value or z-scale value)
@@ -509,15 +511,22 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         if isinstance(output_type, _basestring):
             if output_type not in ['unc_p_value', 'cor_p_value',
                                    'cluster_size_p_value',
-                                   'cluster_mass_p_value']:
+                                   'cluster_mass_p_value',
+                                   'unc_z_score', 'cor_z_score',
+                                   'cluster_size_z_score',
+                                   'cluster_mass_z_score']:
                 raise ValueError(
                     'output_type must be one of "unc_p_value", '
                     '"cor_p_value", "cluster_size_p_value" or '
-                    '"cluster_mass_p_value"')
+                    '"cluster_mass_p_value", "unc_z_score", '
+                    '"cor_z_score", "cluster_size_z_score" or '
+                    '"cluster_mass_z_score"')
         else:
             raise ValueError('output_type must be one of "unc_p_value", '
                              '"cor_p_value", "cluster_size_p_value" or '
-                             '"cluster_mass_p_value"')
+                             '"cluster_mass_p_value", "unc_z_score", '
+                             '"cor_z_score", "cluster_size_z_score" or '
+                             '"cluster_mass_z_score"')
 
         # Get effect_maps appropriate for chosen contrast
         effect_maps = _infer_effect_maps(self.second_level_input_,
@@ -537,16 +546,24 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         else:
             mem_perm = second_level_permutation
 
-        results = mem_perm(Y, self.design_matrix_, )
+        results = mem_perm(Y, self.design_matrix_, con_val, self.masker_,
+                           stat_type=stat_type, threshold=threshold,
+                           height_control=height_control,
+                           two_sided_test=two_sided_test,
+                           n_perm=n_perm, random_state=random_state,
+                           n_jobs=self.n_jobs, verbose=self.verbose)
 
-        if output_type == 'unc_p_value':
+        if 'unc' in output_type:
             estimate_ = results[0]
-        elif output_type == 'cor_p_value':
+        elif 'cor' in output_type:
             estimate_ = results[1]
-        elif output_type == 'cluster_size_p_value':
+        elif 'cluster_size' in output_type:
             estimate_ = results[2]
-        elif output_type == 'cluster_mass_p_value':
+        elif 'cluster_mass' in output_type:
             estimate_ = results[3]
+
+        if 'z_score' in output_type:
+            estimate_ = z_score(estimate_)
 
         # Prepare the returned images
         output = self.masker_.inverse_transform(estimate_)

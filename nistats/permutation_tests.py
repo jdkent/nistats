@@ -28,13 +28,17 @@ def _maxstat_thresholding(stats, masker, threshold=0.001,
     labels = label_map[masker.mask_img_.get_data() > 0]
 
     # Get max size and max mass for extracted components
-    clusters_size = np.empty(n_labels)
-    clusters_mass = np.empty(n_labels)
-    for label_ in range(1, n_labels + 1):
-        clusters_size[label_ - 1] = np.sum(labels == label_)
-        clusters_mass[label_ - 1] = np.sum(stats[labels == label_])
-    csmax = np.max(clusters_size)
-    cmmax = np.max(clusters_mass)
+    if n_labels > 0:
+        clusters_size = np.empty(n_labels)
+        clusters_mass = np.empty(n_labels)
+        for label_ in range(1, n_labels + 1):
+            clusters_size[label_ - 1] = np.sum(labels == label_)
+            clusters_mass[label_ - 1] = np.sum(stats[labels == label_])
+        csmax = int(np.max(clusters_size))
+        cmmax = np.max(clusters_mass)
+    else:
+        csmax = 0
+        cmmax = 0.0
 
     return csmax, cmmax
 
@@ -150,14 +154,13 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         imgs[i * 2 + 1, :] = -1 * Y[i, :]
 
     # Generate permutation set
-    permutation_set = rng.bytes(n_imgs * n_perm_chunk)
-    range_idx = np.array(range(n_imgs)) * 2
+    permutation_set = rng.randint(0, 2, n_imgs * n_perm_chunk)
 
     # Compute permutations
     t0 = time.time()
     for perm in range(n_perm_chunk):
         perm_val = permutation_set[perm * n_imgs:(perm + 1) * n_imgs]
-        perm_idx = np.multiply(perm_val, range_idx)
+        perm_idx = perm_val + (np.array(range(n_imgs)) * 2)
         labels, results = run_glm(imgs[perm_idx], design_matrix.as_matrix(),
                                   n_jobs=n_jobs, noise_model='ols')
         contrast = compute_contrast(labels, results, con_val, stat_type)
