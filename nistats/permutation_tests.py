@@ -202,6 +202,61 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     return unc_rank_parts, smax_parts, cs_max_parts, cm_max_parts
 
 
+def cluster_p_value(stats, masker, stat_dist, cluster_stat,
+                    threshold=0.001, height_control='fpr'):
+    """Compute the p value of clusters for the chosen cluster statistic.
+
+    Parameters
+    ----------
+    stats : array of shape (n_voxels)
+        The image statistic to extract clusters from.
+
+    masker : NiftiMasker object,
+        It must be the same masker employed to extract stats from nifti images.
+        It will be used to compute clusters in permutations.
+
+    stat_dist : array of shape (n_perm)
+        Statistical distribution corresponding to the selected cluster_stat.
+        Obtained from n_perm permutations.
+
+    cluster_stat : string,
+        Type of cluster statistic to consider. Possible values are 'size' and
+        'mass'.
+
+    threshold: float, optional
+        cluster forming threshold (either a p-value or z-scale value)
+
+    height_control: string, optional
+        false positive control meaning of cluster forming
+        threshold: 'fpr'|'fdr'|'bonferroni'|'none'
+    """
+    if cluster_stat not in ['size', 'mass']:
+        raise ValueError('cluster_stat must be "size" or "mass"')
+
+    n_dist = len(stat_dist)
+    z_th = infer_threshold(stats, threshold, height_control)
+
+    # Embed stats back to 3D grid
+    stat_map = masker.inverse_transform(stats).get_data()
+
+    # Extract connected components above threshold
+    label_map, n_labels = label(stat_map > z_th)
+    labels = label_map[masker.mask_img_.get_data() > 0]
+
+    # Fill all cluster voxels with the cluster p_value
+    clusters_pval = np.zeros(len(stats))
+    for label_ in range(1, n_labels + 1):
+        if cluster_stat == 'size':
+            cluster_stat = np.sum(labels == label_)
+        elif cluster_stat == 'mass':
+            cluster_stat = np.sum(stats[labels == label_])
+        cluster_rank = np.sum(stat_dist < cluster_stat)
+        cluster_pval = (n_dist + 1 - cluster_rank) / float(1 + n_dist)
+        clusters_pval[labels == label_] = cluster_pval
+
+    return cluster_pval
+
+
 def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
                              threshold=0.001, height_control='fpr',
                              two_sided_test=True, n_perm=10000,
@@ -336,7 +391,13 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     # Get max cluster size distribution
     cs_max_dist = np.concatenate(cs_max_parts)
+    cs_pvals = cluster_p_value(original_stat, masker, cs_max_dist,
+                               'size', threshold=threshold,
+                               height_control=height_control)
     # Get max cluster mass distribution
     cm_max_dist = np.concatenate(cm_max_parts)
+    cm_pvals = cluster_p_value(original_stat, masker, cm_max_dist,
+                               'mass', threshold=threshold,
+                               height_control=height_control)
 
-    return unc_pvals, cor_pvals, cs_max_dist, cm_max_dist
+    return unc_pvals, cor_pvals, cs_pvals, cm_pvals
