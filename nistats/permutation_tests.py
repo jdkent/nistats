@@ -1,5 +1,5 @@
 """
-Permutation tests for first level and second level analysis.
+Permutation tests for first level and second level models.
 """
 # Author: Martin Perez-Guevara, <mperezguevara@gmail.com>, jan. 2016
 import warnings
@@ -52,36 +52,65 @@ def _original_stat(Y, design_matrix, con_val, stat_type, n_jobs=1):
 
 def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
                    stat_type=None, threshold=0.001, height_control='fpr',
-                   two_sided_test=True, n_perm_chunk=10000, n_perm=10000,
+                   two_sided_test=True, n_perm=10000, n_perm_chunk=10000,
                    random_state=None, thread_id=1, verbose=0, n_jobs=1):
     """sign flip permutations on data for OLS on a data chunk.
     To be used in a parallel computing context.
 
     Parameters
     ----------
-    design_matrix_objs: list of [time_frames, paradigm, kwargs dict].
-        frame_times is an array of shape (n_frames,) representing the timing
-        of the scans in seconds. Paradigm is a DataFrame instance with the
-        description of the experimental paradigm. kwargs are any other
-        arguments that could be passed to the function make_design_matrix
-        defined in nistats.design_matrix.
+    Y : array of shape (n_time_points, n_voxels)
+        The fMRI data.
 
-    n_perm_chunk : int,
-        Number of permutations to be performed.
+    design_matrix : pandas DataFrame (n_time_points, n_regressors)
+        The design matrix.
 
-    two_sided_test : boolean,
+    con_val : array of shape (n_regressors,)
+        Contrast specification to compute statistic.
+
+    masker : NiftiMasker object,
+        It must be the same masker employed to extract Y from nifti images.
+        It will be used to compute clusters in permutations.
+
+    original_stat : array of shape (n_voxels)
+        The original statistic for which uncorrected and corrected p values
+        are computed.
+
+    stat_type : {'t', 'F'}, optional
+        Type of the contrast
+
+    threshold: float, optional
+        cluster forming threshold (either a p-value or z-scale value)
+
+    height_control: string, optional
+        false positive control meaning of cluster forming
+        threshold: 'fpr'|'fdr'|'bonferroni'|'none'
+
+    two_sided_test : boolean, optional
         If True, performs an unsigned t-test. Both positive and negative
         effects are considered; the null hypothesis is that the effect is zero.
         If False, only positive effects are considered as relevant. The null
         hypothesis is that the effect is zero or negative.
 
-    random_state : int or None,
+    n_perm : int, optional
+        Total number of permutations.
+
+    n_perm_chunk : int, optional
+        Number of permutations to be performed in this chunk.
+
+    two_sided_test : boolean, optional
+        If True, performs an unsigned t-test. Both positive and negative
+        effects are considered; the null hypothesis is that the effect is zero.
+        If False, only positive effects are considered as relevant. The null
+        hypothesis is that the effect is zero or negative.
+
+    random_state : int or None, optional
         Seed for random number generator, to have the same permutations
         in each computing units.
 
     Returns
     -------
-    unc_ranks_parts: array-like, shape=(n_voxels)
+    unc_ranks_parts : array-like, shape=(n_voxels)
         Accumulated count of permuted stats over original stats,
         to compute uncorrected p-values. (limited to this permutation chunk).
 
@@ -89,11 +118,11 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         Distribution of the (max) t-statistic under the null hypothesis
         (limited to this permutation chunk).
 
-    cs_max_parts: array-like, shape=(n_perm_chunk, ):
+    cs_max_parts : array-like, shape=(n_perm_chunk, ):
         Distribution of the (max) cluster size. Limited to this permutation
         chunk.
 
-    cm_max_parts: array-like, shape=(n_perm_chunk, ):
+    cm_max_parts : array-like, shape=(n_perm_chunk, ):
         Distribution of the (max) cluster mass. Limited to this permutation
         chunk.
 
@@ -182,32 +211,28 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     Parameters
     ----------
-    contrasts: dict with string as key and list of float as value,
-        The key corresponds to the contrast name and the list size must
-        corresponds to the number of columns in the design matrices.
-        Currently only contrasts between two conditions can be computed.
-        So every contrast value must be of the form [...,+-1.,...,-+1.,...].
-        Contrasts considering more than two conditions will be ignored.
+    Y : array of shape (n_time_points, n_voxels)
+        The fMRI data.
 
-    glm_ref: FirstLevelGLM instance,
-        To provide any GLM computation specification. This object will be
-        taken as a reference, new copies will the same parameters will be
-        created to be fitted on imgs and design_matrices.
+    design_matrix : pandas DataFrame (n_time_points, n_regressors)
+        The design matrix.
 
-    imgs: Niimg-like object or list of Niimg-like objects,
-        See http://nilearn.github.io/building_blocks/manipulating_mr_images.html#niimg.
-        Data on which the GLM will be fitted. If this is a list,
-        the affine is considered the same for all.
+    con_val : array of shape (n_regressors,)
+        Contrast specification to compute statistic.
 
-    design_matrix_objs: list of [time_frames, paradigm, kwargs dict].
-        frame_times is an array of shape (n_frames,) representing the timing
-        of the scans in seconds. Paradigm is a DataFrame instance with the
-        description of the experimental paradigm. kwargs are any other
-        arguments that could be passed to the function make_design_matrix
-        defined in nistats.design_matrix.
+    masker : NiftiMasker object,
+        It must be the same masker employed to extract Y from nifti images.
+        It will be used to compute clusters in permutations.
 
-    n_perm: int, optional
-        Number of permutations. Greater than 0. Defaults to 10000.
+    stat_type : {'t', 'F'}, optional
+        Type of the contrast
+
+    threshold: float, optional
+        cluster forming threshold (either a p-value or z-scale value)
+
+    height_control: string, optional
+        false positive control meaning of cluster forming
+        threshold: 'fpr'|'fdr'|'bonferroni'|'none'
 
     two_sided_test : boolean,
         If True, performs an unsigned t-test. Both positive and negative
@@ -215,29 +240,32 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
         If False, only positive effects are considered as relevant. The null
         hypothesis is that the effect is zero or negative.
 
-    cluster_threshold: None or float, optional
-        Threshold for computation of cluster size statistics. If None will
-        not compute cluster size statistics.
+    n_perm : int, optional
+        Number of permutations. Greater than 0. Defaults to 10000.
+
+    random_state : int or None,
+        Seed for random number generator, to have the same permutations
+        in each computing units.
+
+    verbose : integer, optional
+        Indicate the level of verbosity. By default, nothing is printed.
 
     n_jobs : integer, optional
         The number of CPUs to use to do the computation. -1 means
         'all CPUs', -2 'all CPUs but one', and so on.
 
-    verbose : integer, optional
-        Indicate the level of verbosity. By default, nothing is printed.
-
     Returns
     -------
-    unc_pvals: array-like, shape=(n_voxels)
+    unc_pvals : array-like, shape=(n_voxels)
         Uncorrected p values based on a voxel wise statistic of permutations.
 
     cor_pvals : array-like, shape=(n_voxels)
         FWE corrected p values based on max statistic of permutations.
 
-    cs_max_parts: array-like, shape=(n_perm):
+    cs_max_parts : array-like, shape=(n_perm):
         Distribution of the (max) cluster size.
 
-    cm_max_parts: array-like, shape=(n_perm):
+    cm_max_parts : array-like, shape=(n_perm):
         Distribution of the (max) cluster mass.
     """
     # check n_jobs (number of CPUs)
