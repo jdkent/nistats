@@ -27,6 +27,7 @@ from .regression import SimpleRegressionResults
 from .contrasts import compute_contrast
 from .utils import _basestring
 from .design_matrix import create_second_level_design
+from .permutation_tests import second_level_permutation
 
 
 def _infer_effect_maps(second_level_input, contrast_def):
@@ -415,6 +416,137 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         # We get desired output from contrast object
         estimate_ = getattr(contrast, output_type)()
+
+        # Prepare the returned images
+        output = self.masker_.inverse_transform(estimate_)
+        contrast_name = str(con_val)
+        output.get_header()['descrip'] = (
+            '%s of contrast %s' % (output_type, contrast_name))
+        return output
+
+    def compute_contrast_permutations(
+            self, contrast_def='contrast', first_level_contrast=None,
+            stat_type=None, output_type='cor_p_value', threshold=0.001,
+            height_control='fpr', two_sided_test=True, n_perm=10000,
+            random_state=None):
+        """Generate different permutation test outputs corresponding to
+        the contrasts provided e.g. corrected p values and cluster statistics.
+
+        Parameters
+        ----------
+        contrast_def: str or array of shape (n_col), optional
+            Where ``n_col`` is the number of columns of the design matrix,
+            The string can be a formula compatible with the linear constraint
+            of the Patsy library. Basically one can use the name of the
+            conditions as they appear in the design matrix of
+            the fitted model combined with operators /*+- and numbers.
+            Please checks the patsy documentation for formula examples:
+            http://patsy.readthedocs.io/en/latest/API-reference.html#patsy.DesignInfo.linear_constraint
+            By default it returns the group contrast of the main effect.
+
+        first_level_contrast: str or array of shape (n_col) with respect to
+                              FirstLevelModel, optional
+            In case a list of FirstLevelModel was provided as
+            second_level_input, we have to provide a contrast to apply to
+            the first level models to get the corresponding list of images
+            desired, that would be tested at the second level.
+
+        stat_type: {'t', 'F'}, optional
+            Type of the contrast
+
+        output_type: str, optional
+            Type of the output map. Can be 'unc_p_value', 'cor_p_value',
+            'cluster_size_p_value' or 'cluster_mass_p_value'
+
+        threshold: float, optional
+            cluster forming threshold (either a p-value or z-scale value)
+
+        height_control: string, optional
+            false positive control meaning of cluster forming
+            threshold: 'fpr'|'fdr'|'bonferroni'|'none'
+
+        two_sided_test : boolean,
+            If True, performs an unsigned t-test. Both positive and negative
+            effects are considered; the null hypothesis is that the effect is
+            zero. If False, only positive effects are considered as relevant.
+            The null hypothesis is that the effect is zero or negative.
+
+        n_perm : int, optional
+            Number of permutations. Greater than 0. Defaults to 10000.
+
+        random_state : int or None,
+            Seed for random number generator, to have the same permutations
+            in each computing units.
+
+        Returns
+        -------
+        output_image: Nifti1Image
+            The desired output image
+
+        """
+        if self.second_level_input_ is None:
+            raise ValueError('The model has not been fit yet')
+
+        # first_level_contrast check
+        if isinstance(self.second_level_input_[0], FirstLevelModel):
+            if first_level_contrast is None:
+                raise ValueError('If second_level_input was a list of '
+                                 'FirstLevelModel, then first_level_contrast '
+                                 'is mandatory. It corresponds to the '
+                                 'contrast_def argument of the '
+                                 'compute_contrast method of FirstLevelModel')
+
+        # check contrast definition
+        if isinstance(contrast_def, np.ndarray):
+            con_val = contrast_def
+            if np.all(con_val == 0):
+                raise ValueError('Contrast is null')
+        else:
+            design_info = DesignInfo(self.design_matrix_.columns.tolist())
+            con_val = design_info.linear_constraint(contrast_def).coefs
+
+        # check output type
+        if isinstance(output_type, _basestring):
+            if output_type not in ['unc_p_value', 'cor_p_value',
+                                   'cluster_size_p_value',
+                                   'cluster_mass_p_value']:
+                raise ValueError(
+                    'output_type must be one of "unc_p_value", '
+                    '"cor_p_value", "cluster_size_p_value" or '
+                    '"cluster_mass_p_value"')
+        else:
+            raise ValueError('output_type must be one of "unc_p_value", '
+                             '"cor_p_value", "cluster_size_p_value" or '
+                             '"cluster_mass_p_value"')
+
+        # Get effect_maps appropriate for chosen contrast
+        effect_maps = _infer_effect_maps(self.second_level_input_,
+                                         contrast_def)
+        # check design matrix X and effect maps Y agree on number of rows
+        if len(effect_maps) != self.design_matrix_.shape[0]:
+            raise ValueError('design_matrix does not match the number of maps '
+                             'considered. Rows in design matrix do not agree '
+                             'with number of maps')
+
+        # Fit an OLS regression for parametric statistics
+        Y = self.masker_.transform(effect_maps)
+        if self.memory is not None:
+            arg_ignore = ['n_jobs', 'verbose']
+            mem_perm = self.memory.cache(second_level_permutation,
+                                         ignore=arg_ignore)
+        else:
+            mem_perm = second_level_permutation
+
+        results = mem_perm(Y, self.design_matrix_, )
+
+        if output_type == 'unc_p_value':
+            estimate_ = results[0]
+        elif output_type == 'cor_p_value':
+            estimate_ = results[1]
+        elif output_type == 'cluster_size_p_value':
+            estimate_ = results[2]
+        elif output_type == 'cluster_mass_p_value':
+            estimate_ = results[3]
 
         # Prepare the returned images
         output = self.masker_.inverse_transform(estimate_)
