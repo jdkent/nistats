@@ -58,7 +58,7 @@ second_level_input = data['cmaps']
 design_matrix = pd.DataFrame([1] * len(second_level_input),
                              columns=['intercept'])
 
-second_level_model = SecondLevelModel(smoothing_fwhm=8.0)
+second_level_model = SecondLevelModel(smoothing_fwhm=8.0, n_jobs=-2)
 second_level_model = second_level_model.fit(second_level_input,
                                             design_matrix=design_matrix)
 
@@ -85,7 +85,7 @@ plotting.show()
 # parameters. For this example we will only use 1000 permutations. But we
 # recommend to use 10000.
 z_map = second_level_model.compute_contrast_permutations(
-    output_type='cor_z_score')
+    output_type='cor_z_score', n_perm=1000)
 
 #########################################################################
 # We threshold the contrast at corrected p < 0.001 and plot
