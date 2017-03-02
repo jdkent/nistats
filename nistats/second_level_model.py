@@ -425,7 +425,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         return output
 
     def compute_contrast_permutations(
-            self, contrast_def='contrast', first_level_contrast=None,
+            self, contrast_def='intercept', first_level_contrast=None,
             stat_type=None, output_type='cor_z_score', threshold=0.001,
             height_control='fpr', two_sided_test=True, n_perm=10000,
             random_state=None):

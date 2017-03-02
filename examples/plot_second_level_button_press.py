@@ -58,7 +58,7 @@ second_level_input = data['cmaps']
 design_matrix = pd.DataFrame([1] * len(second_level_input),
                              columns=['intercept'])
 
-second_level_model = SecondLevelModel(smoothing_fwhm=8.0, n_jobs=-2)
+second_level_model = SecondLevelModel(smoothing_fwhm=8.0, n_jobs=1)
 second_level_model = second_level_model.fit(second_level_input,
                                             design_matrix=design_matrix)
 
@@ -89,7 +89,7 @@ z_map = second_level_model.compute_contrast_permutations(
 
 #########################################################################
 # We threshold the contrast at corrected p < 0.001 and plot
-p_val = 0.001
+p_val = 0.05
 z_th = norm.isf(p_val)
 display = plotting.plot_glass_brain(
     z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='z',
