@@ -43,12 +43,12 @@ def _maxstat_thresholding(stats, masker, threshold=0.001,
     return csmax, cmmax
 
 
-def _original_stat(Y, design_matrix, con_val, stat_type, n_jobs=1):
+def _get_z_score(Y, design_matrix, con_val, stat_type, n_jobs=1):
     """Return original statistic."""
     labels, results = run_glm(Y, design_matrix.as_matrix(),
                               n_jobs=n_jobs, noise_model='ols')
     contrast = compute_contrast(labels, results, con_val, stat_type)
-    original_stat = contrast.stat()
+    original_stat = contrast.z_score()
     del labels
     del results
     return original_stat
@@ -63,10 +63,10 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
 
     Parameters
     ----------
-    Y : array of shape (n_time_points, n_voxels)
+    Y : array of shape (n_subjects, n_voxels)
         The fMRI data.
 
-    design_matrix : pandas DataFrame (n_time_points, n_regressors)
+    design_matrix : pandas DataFrame (n_subjects, n_regressors)
         The design matrix.
 
     con_val : array of shape (n_regressors,)
@@ -139,6 +139,10 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     # initialize the seed of the random generator
     rng = check_random_state(random_state)
 
+    # Take absolute value of stat for two sided test
+    if two_sided_test:
+        original_stat = np.fabs(original_stat)
+
     # Initialize result arrays for max stat, max cluster size and max
     # cluster mass
     unc_rank_parts = np.zeros(len(original_stat))
@@ -161,12 +165,8 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     for perm in range(n_perm_chunk):
         perm_val = permutation_set[perm * n_imgs:(perm + 1) * n_imgs]
         perm_idx = perm_val + (np.array(range(n_imgs)) * 2)
-        labels, results = run_glm(imgs[perm_idx], design_matrix.as_matrix(),
-                                  n_jobs=n_jobs, noise_model='ols')
-        contrast = compute_contrast(labels, results, con_val, stat_type)
-        permuted_stat = contrast.stat()
-        del labels
-        del results
+        permuted_stat = _get_z_score(imgs[perm_idx], design_matrix, con_val,
+                                     stat_type, n_jobs=n_jobs)
 
         # For uncorrected p-values
         if two_sided_test:
@@ -269,10 +269,10 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     Parameters
     ----------
-    Y : array of shape (n_time_points, n_voxels)
+    Y : array of shape (n_subjects, n_voxels)
         The fMRI data.
 
-    design_matrix : pandas DataFrame (n_time_points, n_regressors)
+    design_matrix : pandas DataFrame (n_subjects, n_regressors)
         The design matrix.
 
     con_val : array of shape (n_regressors,)
@@ -356,8 +356,10 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
         n_perm_chunks = np.ones(n_perm, dtype=int)
 
     # Compute original stat and clusters only once
-    original_stat = _original_stat(Y, design_matrix, con_val, stat_type,
-                                   n_jobs)
+    original_stat = _get_z_score(Y, design_matrix, con_val, stat_type, n_jobs)
+    # Take absolute value of stat for two sided test
+    if two_sided_test:
+        original_stat = np.fabs(original_stat)
 
     # initialize the seed of the random generator
     rng = check_random_state(random_state)

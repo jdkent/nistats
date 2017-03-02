@@ -564,6 +564,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         if 'z_score' in output_type:
             estimate_ = z_score(estimate_)
+            estimate_[estimate_ < 0.] = 0.
 
         # Prepare the returned images
         output = self.masker_.inverse_transform(estimate_)

@@ -83,16 +83,30 @@ plotting.show()
 # ----------------------------------------------------
 # We use a similar function that also allows to tune the permutation
 # parameters. For this example we will only use 1000 permutations. But we
-# recommend to use 10000.
+# recommend to use 10000. First we compute the two_sided_test.
 z_map = second_level_model.compute_contrast_permutations(
-    output_type='cor_z_score', n_perm=1000)
+    output_type='cor_z_score', n_perm=1000, two_sided_test=True)
 
 #########################################################################
-# We threshold the contrast at corrected p < 0.001 and plot
+# We threshold the contrast at corrected p < 0.05 and plot
 p_val = 0.05
 z_th = norm.isf(p_val)
 display = plotting.plot_glass_brain(
     z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='z',
-    title='group left-right button press (unc p<0.001')
+    title='group left-right button press (cor p<0.001')
+
+plotting.show()
+
+#########################################################################
+# Now we compute the one sided test that should show only activations
+# for the left button press. We threshold at corrected p < 0.05 and plot.
+z_map = second_level_model.compute_contrast_permutations(
+    output_type='cor_z_score', n_perm=1000, two_sided_test=False)
+
+p_val = 0.05
+z_th = norm.isf(p_val)
+display = plotting.plot_glass_brain(
+    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='z',
+    title='group left-right button press (cor p<0.001')
 
 plotting.show()
