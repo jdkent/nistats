@@ -455,10 +455,9 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             Type of the contrast
 
         output_type: str, optional
-            Type of the output map. Can be 'unc_p_value', 'unc_z_score',
-            'cor_p_value', 'cor_z_score', 'cluster_size_p_value',
-            'cluster_size_z_score', 'cluster_mass_p_value' or
-            'cluster_mass_z_score'
+            Type of the output map. Can be 'cor_p_value', 'cor_z_score',
+            'cluster_size_p_value', 'cluster_size_z_score',
+            'cluster_mass_p_value' or 'cluster_mass_z_score'
 
         threshold: float, optional
             cluster forming threshold (either a p-value or z-scale value)
@@ -509,22 +508,21 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         # check output type
         if isinstance(output_type, _basestring):
-            if output_type not in ['unc_p_value', 'cor_p_value',
-                                   'cluster_size_p_value',
+            if output_type not in ['cluster_size_p_value',
                                    'cluster_mass_p_value',
                                    'unc_z_score', 'cor_z_score',
                                    'cluster_size_z_score',
                                    'cluster_mass_z_score']:
                 raise ValueError(
-                    'output_type must be one of "unc_p_value", '
+                    'output_type must be one of '
                     '"cor_p_value", "cluster_size_p_value" or '
-                    '"cluster_mass_p_value", "unc_z_score", '
+                    '"cluster_mass_p_value", '
                     '"cor_z_score", "cluster_size_z_score" or '
                     '"cluster_mass_z_score"')
         else:
-            raise ValueError('output_type must be one of "unc_p_value", '
+            raise ValueError('output_type must be one of '
                              '"cor_p_value", "cluster_size_p_value" or '
-                             '"cluster_mass_p_value", "unc_z_score", '
+                             '"cluster_mass_p_value", '
                              '"cor_z_score", "cluster_size_z_score" or '
                              '"cluster_mass_z_score"')
 
@@ -553,14 +551,12 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
                            n_perm=n_perm, random_state=random_state,
                            n_jobs=self.n_jobs, verbose=self.verbose)
 
-        if 'unc' in output_type:
+        if 'cor' in output_type:
             estimate_ = results[0]
-        elif 'cor' in output_type:
-            estimate_ = results[1]
         elif 'cluster_size' in output_type:
-            estimate_ = results[2]
+            estimate_ = results[1]
         elif 'cluster_mass' in output_type:
-            estimate_ = results[3]
+            estimate_ = results[2]
 
         if 'z_score' in output_type:
             estimate_ = z_score(estimate_)
