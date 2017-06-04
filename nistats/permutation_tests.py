@@ -114,10 +114,6 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
 
     Returns
     -------
-    unc_ranks_parts : array-like, shape=(n_voxels)
-        Accumulated count of permuted stats over original stats,
-        to compute uncorrected p-values. (limited to this permutation chunk).
-
     smax_parts : array-like, shape=(n_perm_chunk, )
         Distribution of the (max) t-statistic under the null hypothesis
         (limited to this permutation chunk).
@@ -145,7 +141,6 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
 
     # Initialize result arrays for max stat, max cluster size and max
     # cluster mass
-    unc_rank_parts = np.zeros(len(original_stat))
     smax_parts = np.empty((n_perm_chunk))
     cs_max_parts = np.empty((n_perm_chunk))
     cm_max_parts = np.empty((n_perm_chunk))
@@ -167,12 +162,6 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         perm_idx = perm_val + (np.array(range(n_imgs)) * 2)
         permuted_stat = _get_z_score(imgs[perm_idx], design_matrix, con_val,
                                      stat_type, n_jobs=n_jobs)
-
-        # For uncorrected p-values
-        if two_sided_test:
-            unc_rank_parts += (np.fabs(permuted_stat) < original_stat)
-        else:
-            unc_rank_parts += (permuted_stat < original_stat)
 
         # Get max statistic
         smax_parts[perm] = np.max(permuted_stat)
@@ -202,7 +191,7 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
                     % (thread_id, i, n_perm_chunk, con_val, percent, remaining,
                        crlf))
 
-    return unc_rank_parts, smax_parts, cs_max_parts, cm_max_parts
+    return smax_parts, cs_max_parts, cm_max_parts
 
 
 def cluster_p_value(stats, masker, stat_dist, cluster_stat,
@@ -314,9 +303,6 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
 
     Returns
     -------
-    unc_pvals : array-like, shape=(n_voxels)
-        Uncorrected p values based on a voxel wise statistic of permutations.
-
     cor_pvals : array-like, shape=(n_voxels)
         FWE corrected p values based on max statistic of permutations.
 
@@ -374,13 +360,7 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
             n_perm=n_perm, thread_id=thread_id, verbose=verbose)
         for thread_id, n_perm_chunk in enumerate(n_perm_chunks))
 
-    unc_rank_parts, smax_parts, cs_max_parts, cm_max_parts = zip(*per)
-
-    # Get uncorrected p-values
-    unc_rank = np.zeros(len(original_stat))
-    for unc_rank_part in unc_rank_parts:
-        unc_rank += unc_rank_part
-    unc_pvals = (n_perm + 1 - unc_rank) / float(1 + n_perm)
+    smax_parts, cs_max_parts, cm_max_parts = zip(*per)
 
     # Get corrected p-values
     smax = np.concatenate(smax_parts)
@@ -405,4 +385,4 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
                                'mass', threshold=threshold,
                                height_control=height_control)
 
-    return unc_pvals, cor_pvals, cs_pvals, cm_pvals
+    return cor_pvals, cs_pvals, cm_pvals
