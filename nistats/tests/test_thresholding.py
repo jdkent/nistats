@@ -8,7 +8,7 @@ import nibabel as nib
 from nistats.thresholding import (fdr_threshold, map_threshold)
 
 
-def test_fdr():
+def test_fdr_threshold():
     n = 100
     x = np.linspace(.5 / n, 1. - .5 / n, n)
     x[:10] = .0005
@@ -16,6 +16,10 @@ def test_fdr():
     np.random.shuffle(x)
     assert_almost_equal(fdr_threshold(x, .1), norm.isf(.0005))
     assert_true(fdr_threshold(x, .001) == np.infty)
+
+
+def test_infer_threshold():
+    raise NotImplementedError
 
 
 def test_map_threshold():

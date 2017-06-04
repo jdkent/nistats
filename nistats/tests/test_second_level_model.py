@@ -25,17 +25,18 @@ BASEDIR = os.path.dirname(os.path.abspath(__file__))
 FUNCFILE = os.path.join(BASEDIR, 'functional.nii.gz')
 
 
-def write_fake_fmri_data(shapes, rk=3, affine=np.eye(4)):
+def write_fake_fmri_data(shapes, rk=3, affine=np.eye(4), mask_th=.5,
+                         img_mean=100.):
     mask_file, fmri_files, design_files = 'mask.nii', [], []
     for i, shape in enumerate(shapes):
         fmri_files.append('fmri_run%d.nii' % i)
         data = np.random.randn(*shape)
-        data[1:-1, 1:-1, 1:-1] += 100
+        data[1:-1, 1:-1, 1:-1] += img_mean
         save(Nifti1Image(data, affine), fmri_files[-1])
         design_files.append('dmtx_%d.csv' % i)
         pd.DataFrame(np.random.randn(shape[3], rk),
                      columns=['', '', '']).to_csv(design_files[-1])
-    save(Nifti1Image((np.random.rand(*shape[:3]) > .5).astype(np.int8),
+    save(Nifti1Image((np.random.rand(*shape[:3]) > mask_th).astype(np.int8),
                      affine), mask_file)
     return mask_file, fmri_files, design_files
 
@@ -160,7 +161,7 @@ def test_second_level_model_glm_computation():
         assert_equal(len(results1), len(results2))
 
 
-def test_second_level_model_contrast_computation():
+def test_second_level_model_compute_contrast():
     with InTemporaryDirectory():
         shapes = ((7, 8, 9, 1),)
         mask, FUNCFILE, _ = write_fake_fmri_data(shapes)
@@ -194,3 +195,7 @@ def test_second_level_model_contrast_computation():
         assert_raises(ValueError, model.compute_contrast, c1, None, '')
         assert_raises(ValueError, model.compute_contrast, c1, None, [])
         assert_raises(ValueError, model.compute_contrast, c1, None, None, '')
+
+
+def test_second_level_model_compute_contrast_permutations():
+    raise NotImplementedError
