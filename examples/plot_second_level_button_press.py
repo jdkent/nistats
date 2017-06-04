@@ -73,8 +73,9 @@ z_map = second_level_model.compute_contrast(output_type='z_score')
 # We threshold the contrast at uncorrected p < 0.001 and plot
 p_val = 0.001
 z_th = norm.isf(p_val)
-display = plotting.plot_glass_brain(z_map, threshold=z_th, colorbar=True,
-                                    plot_abs=False, display_mode='z')
+display = plotting.plot_glass_brain(
+    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='ortho',
+    title='group left-right press (unc p < 0.001)')
 
 plotting.show()
 
@@ -92,8 +93,8 @@ z_map = second_level_model.compute_contrast_permutations(
 p_val = 0.05
 z_th = norm.isf(p_val)
 display = plotting.plot_glass_brain(
-    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='z',
-    title='group left-right button press (cor p<0.001')
+    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='ortho',
+    title='group left-right press (two-sided) (cor p < 0.05)')
 
 plotting.show()
 
@@ -106,7 +107,7 @@ z_map = second_level_model.compute_contrast_permutations(
 p_val = 0.05
 z_th = norm.isf(p_val)
 display = plotting.plot_glass_brain(
-    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='z',
-    title='group left-right button press (cor p<0.001')
+    z_map, threshold=z_th, colorbar=True, plot_abs=False, display_mode='ortho',
+    title='group left-right press (one-sided) (cor p < 0.05)')
 
 plotting.show()
