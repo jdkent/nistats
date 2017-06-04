@@ -54,7 +54,7 @@ def _get_z_score(Y, design_matrix, con_val, stat_type, n_jobs=1):
     return original_stat
 
 
-def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
+def _sign_flip_glm(Y, design_matrix, con_val, masker,
                    stat_type=None, threshold=0.001, height_control='fpr',
                    two_sided_test=True, n_perm=10000, n_perm_chunk=10000,
                    random_state=None, thread_id=1, verbose=0, n_jobs=1):
@@ -75,10 +75,6 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     masker : NiftiMasker object,
         It must be the same masker employed to extract Y from nifti images.
         It will be used to compute clusters in permutations.
-
-    original_stat : array of shape (n_voxels)
-        The original statistic for which uncorrected and corrected p values
-        are computed.
 
     stat_type : {'t', 'F'}, optional
         Type of the contrast
@@ -115,7 +111,7 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     Returns
     -------
     smax_parts : array-like, shape=(n_perm_chunk, )
-        Distribution of the (max) t-statistic under the null hypothesis
+        Distribution of the (max) z-statistic under the null hypothesis
         (limited to this permutation chunk).
 
     cs_max_parts : array-like, shape=(n_perm_chunk, ):
@@ -134,10 +130,6 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
     """
     # initialize the seed of the random generator
     rng = check_random_state(random_state)
-
-    # Take absolute value of stat for two sided test
-    if two_sided_test:
-        original_stat = np.fabs(original_stat)
 
     # Initialize result arrays for max stat, max cluster size and max
     # cluster mass
@@ -162,6 +154,8 @@ def _sign_flip_glm(Y, design_matrix, con_val, masker, original_stat,
         perm_idx = perm_val + (np.array(range(n_imgs)) * 2)
         permuted_stat = _get_z_score(imgs[perm_idx], design_matrix, con_val,
                                      stat_type, n_jobs=n_jobs)
+        if two_sided_test:
+            permuted_stat = np.fabs(permuted_stat)
 
         # Get max statistic
         smax_parts[perm] = np.max(permuted_stat)
@@ -246,7 +240,7 @@ def cluster_p_value(stats, masker, stat_dist, cluster_stat,
         cluster_pval = (n_dist + 1 - cluster_rank) / float(1 + n_dist)
         clusters_pval[labels == label_] = cluster_pval
 
-    return cluster_pval
+    return clusters_pval
 
 
 def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
@@ -341,18 +335,12 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
                       'resources.' % (n_perm, n_jobs, n_perm))
         n_perm_chunks = np.ones(n_perm, dtype=int)
 
-    # Compute original stat and clusters only once
-    original_stat = _get_z_score(Y, design_matrix, con_val, stat_type, n_jobs)
-    # Take absolute value of stat for two sided test
-    if two_sided_test:
-        original_stat = np.fabs(original_stat)
-
     # initialize the seed of the random generator
     rng = check_random_state(random_state)
 
     per = joblib.Parallel(n_jobs=n_jobs, verbose=verbose)(
         joblib.delayed(_sign_flip_glm)(
-            Y, design_matrix, con_val, masker, original_stat,
+            Y, design_matrix, con_val, masker,
             stat_type=stat_type, threshold=threshold,
             height_control=height_control, two_sided_test=two_sided_test,
             n_perm_chunk=n_perm_chunk,
@@ -361,6 +349,12 @@ def second_level_permutation(Y, design_matrix, con_val, masker, stat_type=None,
         for thread_id, n_perm_chunk in enumerate(n_perm_chunks))
 
     smax_parts, cs_max_parts, cm_max_parts = zip(*per)
+
+    # Compute original stat and clusters only once
+    original_stat = _get_z_score(Y, design_matrix, con_val, stat_type, n_jobs)
+    # Take absolute value of stat for two sided test
+    if two_sided_test:
+        original_stat = np.fabs(original_stat)
 
     # Get corrected p-values
     smax = np.concatenate(smax_parts)
