@@ -82,7 +82,6 @@ def test_sign_flip_glm_noeffect():
         X = pd.DataFrame([[1]] * n_samples, columns=['intercept'])
         masker = NiftiMasker(mask).fit()
         Y = masker.transform(Y)
-        original_stat = _get_z_score(Y, X, con_val, None)
 
         # Estimate Bonferroni corrected z threshold
         pval_th = 0.1  # Pick this value for perm_ranges multiples of 10
@@ -93,8 +92,9 @@ def test_sign_flip_glm_noeffect():
         perm_repetitions = 5
         perm_error = []
         for i, n_perm in enumerate(np.repeat(perm_ranges, perm_repetitions)):
-            results = _sign_flip_glm(Y, X, con_val, masker, original_stat,
-                                     n_perm=n_perm, n_perm_chunk=n_perm)
+            results = _sign_flip_glm(Y, X, con_val, masker,
+                                     n_perm=n_perm, n_perm_chunk=n_perm,
+                                     two_sided_test=False)
             smax, cs_max, cm_max = results
             assert_equal(len(smax), n_perm)
 
@@ -109,7 +109,6 @@ def test_sign_flip_glm_noeffect():
         perm_error = np.array(perm_error).reshape(len(perm_ranges),
                                                   perm_repetitions)
         assert_array_less(np.diff(np.mean(perm_error, axis=1)), 0)
-        print(np.mean(perm_error, axis=1))
 
 
 def test_sign_flip_glm_sided_test(random_state=0):
@@ -157,8 +156,58 @@ def test_sign_flip_glm_sided_test(random_state=0):
 
 
 def test_cluster_p_value():
-    raise NotImplementedError
+    with InTemporaryDirectory():
+        n_samples = 1
+        shapes = [(100, 100, 100, 1)] * n_samples
+        mask, Y, _ = write_fake_fmri_data(shapes, mask_th=-0.1, img_mean=0.)
+        masker = NiftiMasker(mask).fit()
+
+        effect = stats.norm.isf(0.0001)  # effect greater than p val 0.001
+        # Create clusters, the biggest has to be captured
+        Y = load(Y[0])
+        clusters_matrix = Y.get_data()[:, :, :, 0]
+        clusters_matrix[:, :, :] = 0.
+        clusters_matrix[:10, :10, :10] = effect
+        cluster_size = 1000
+        cluster_mass = 1000 * effect
+        clusters_img = nib.Nifti1Image(clusters_matrix, Y.get_affine())
+        Y = masker.transform(clusters_img)[0, :]
+
+        # Create fake distribution for mass and size cluster stats
+        # The idea is to get back the expected p value from our fake dist
+        size_dist = [0] * 90 + [cluster_size + 1] * 10  # 11/101. (.1089 pval)
+        mass_dist = [0] * 90 + [cluster_mass + 1] * 10  # 11/101. (.1089 pval)
+
+        size_pval = cluster_p_value(Y, masker, size_dist, 'size')
+        mass_pval = cluster_p_value(Y, masker, mass_dist, 'mass')
+        # The voxels in cluster are the only ones with p val > 0.1 (0.1089)
+        assert(np.sum(size_pval > 0.1) == 1000)
+        assert(np.sum(mass_pval > 0.1) == 1000)
 
 
 def test_second_level_permutation():
-    raise NotImplementedError
+    # Quick check between bonferroni correction and permuted corrected p values
+    with InTemporaryDirectory():
+        # Create dummy gaussian dataset with no effects
+        n_samples = 50
+        res = 3
+        shapes = [(res, res, res, 1)] * n_samples
+        mask, Y, _ = write_fake_fmri_data(shapes, mask_th=-.1, img_mean=0)
+        con_val = np.array([1.])
+        X = pd.DataFrame([[1]] * n_samples, columns=['intercept'])
+        masker = NiftiMasker(mask).fit()
+        Y = masker.transform(Y)
+        original_stat = _get_z_score(Y, X, con_val, None)
+
+        # Estimate Bonferroni corrected z threshold
+        pval_th = 0.99  # Pick this value for perm_ranges multiples of 10
+        bonferroni_th = stats.norm.isf(pval_th / (res ** 3))
+
+        # Get the permutation corrected p values
+        results = second_level_permutation(
+            Y, X, con_val, masker, n_perm=10000, two_sided_test=False)
+        cor_pvals, _, _ = results
+        cor_pvals_passed_bonferroni = cor_pvals[original_stat > bonferroni_th]
+        # Voxels that pass the bonferroni test should pass the permutation test
+        assert(np.sum(cor_pvals_passed_bonferroni < pval_th) ==
+               len(cor_pvals_passed_bonferroni))

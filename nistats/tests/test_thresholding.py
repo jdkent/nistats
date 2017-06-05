@@ -18,10 +18,6 @@ def test_fdr_threshold():
     assert_true(fdr_threshold(x, .001) == np.infty)
 
 
-def test_infer_threshold():
-    raise NotImplementedError
-
-
 def test_map_threshold():
     shape = (9, 10, 11)
     p = np.prod(shape)
