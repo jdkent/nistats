@@ -425,7 +425,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         return output
 
     def compute_contrast_permutations(
-            self, contrast_def='intercept', first_level_contrast=None,
+            self, second_level_contrast='intercept', first_level_contrast=None,
             stat_type=None, output_type='cor_z_score', threshold=0.001,
             height_control='fpr', two_sided_test=True, n_perm=10000,
             random_state=None):
@@ -434,7 +434,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         Parameters
         ----------
-        contrast_def: str or array of shape (n_col), optional
+        second_level_contrast: str or array of shape (n_col), optional
             Where ``n_col`` is the number of columns of the design matrix,
             The string can be a formula compatible with the linear constraint
             of the Patsy library. Basically one can use the name of the
@@ -494,23 +494,23 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
                 raise ValueError('If second_level_input was a list of '
                                  'FirstLevelModel, then first_level_contrast '
                                  'is mandatory. It corresponds to the '
-                                 'contrast_def argument of the '
+                                 'second_level_contrast argument of the '
                                  'compute_contrast method of FirstLevelModel')
 
         # check contrast definition
-        if isinstance(contrast_def, np.ndarray):
-            con_val = contrast_def
+        if isinstance(second_level_contrast, np.ndarray):
+            con_val = second_level_contrast
             if np.all(con_val == 0):
                 raise ValueError('Contrast is null')
         else:
             design_info = DesignInfo(self.design_matrix_.columns.tolist())
-            con_val = design_info.linear_constraint(contrast_def).coefs
+            con_val = design_info.linear_constraint(second_level_contrast).coefs
 
         # check output type
         if isinstance(output_type, _basestring):
             if output_type not in ['cluster_size_p_value',
                                    'cluster_mass_p_value',
-                                   'unc_z_score', 'cor_z_score',
+                                   'cor_p_value', 'cor_z_score',
                                    'cluster_size_z_score',
                                    'cluster_mass_z_score']:
                 raise ValueError(
@@ -528,7 +528,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         # Get effect_maps appropriate for chosen contrast
         effect_maps = _infer_effect_maps(self.second_level_input_,
-                                         contrast_def)
+                                         second_level_contrast)
         # check design matrix X and effect maps Y agree on number of rows
         if len(effect_maps) != self.design_matrix_.shape[0]:
             raise ValueError('design_matrix does not match the number of maps '

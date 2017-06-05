@@ -198,4 +198,47 @@ def test_second_level_model_compute_contrast():
 
 
 def test_second_level_model_compute_contrast_permutations():
-    raise NotImplementedError
+    with InTemporaryDirectory():
+        shapes = ((7, 8, 9, 1),)
+        mask, FUNCFILE, _ = write_fake_fmri_data(shapes)
+        FUNCFILE = FUNCFILE[0]
+        func_img = load(FUNCFILE)
+        # ols case
+        model = SecondLevelModel(mask=mask)
+        # asking for contrast before model fit gives error
+        assert_raises(ValueError, model.compute_contrast_permutations,
+                      'intercept')
+        # fit model
+        Y = [func_img] * 4
+        X = pd.DataFrame([[1]] * 4, columns=['intercept'])
+        model = model.fit(Y, design_matrix=X)
+        ncol = len(model.design_matrix_.columns)
+        c1, cnull = np.eye(ncol)[0, :], np.zeros(ncol)
+        # smoke test for different contrasts in fixed effects
+        model.compute_contrast_permutations(c1)
+        model.compute_contrast_permutations(
+            c1, output_type='cor_p_value', n_perm=5)
+        model.compute_contrast_permutations(
+            c1, output_type='cor_z_score', n_perm=5)
+        model.compute_contrast_permutations(
+            c1, output_type='cluster_size_p_value', n_perm=5)
+        model.compute_contrast_permutations(
+            c1, output_type='cluster_size_z_score', n_perm=5)
+        model.compute_contrast_permutations(
+            c1, output_type='cluster_mass_p_value', n_perm=5)
+        model.compute_contrast_permutations(
+            c1, output_type='cluster_mass_z_score', n_perm=5)
+        # formula should work (passing variable name directly)
+        model.compute_contrast_permutations('intercept', n_perm=5)
+        # or simply pass nothing
+        model.compute_contrast_permutations(n_perm=5)
+        # passing null contrast should give back a value error
+        assert_raises(ValueError, model.compute_contrast_permutations, cnull)
+        # passing wrong parameters
+        assert_raises(ValueError, model.compute_contrast_permutations, [])
+        assert_raises(ValueError, model.compute_contrast_permutations,
+                      c1, None, '')
+        assert_raises(ValueError, model.compute_contrast_permutations,
+                      c1, None, [])
+        assert_raises(ValueError, model.compute_contrast_permutations,
+                      c1, None, None, '')
