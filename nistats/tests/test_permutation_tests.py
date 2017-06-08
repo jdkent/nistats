@@ -151,8 +151,10 @@ def test_sign_flip_glm_sided_test(random_state=0):
                    pvals_onesided2[positive_effect_location] > 0), 0)
 
         # Check positive and negative effects are captured with two-sided
-        assert(np.sum(pvals_twosided[positive_effect_location] < 1.) > 0)
-        assert(np.sum(pvals_twosided[negative_effect_location] < 1.) > 0)
+        if np.sum(positive_effect_location) > 0:
+            assert(np.sum(pvals_twosided[positive_effect_location] < 1.) > 0)
+        if np.sum(negative_effect_location) > 0:
+            assert(np.sum(pvals_twosided[negative_effect_location] < 1.) > 0)
 
 
 def test_cluster_p_value():
