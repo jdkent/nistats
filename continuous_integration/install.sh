@@ -107,7 +107,7 @@ elif [[ "$DISTRIB" == "conda" ]]; then
     # Install the latest available version of nilearn and patsy
     pip install nilearn
     pip install patsy
-  
+
 
 else
     echo "Unrecognized distribution ($DISTRIB); cannot setup travis environment."

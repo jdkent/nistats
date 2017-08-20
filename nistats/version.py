@@ -42,7 +42,7 @@ REQUIRED_MODULE_METADATA = (
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('nibabel', {
-        'min_version': '1.1.0',
+        'min_version': '1.2.0',
         'required_at_installation': False}),
     ('pandas', {
         'min_version': '0.13.0',
@@ -53,7 +53,7 @@ REQUIRED_MODULE_METADATA = (
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('sklearn', {
-        'min_version': '0.14.1',
+        'min_version': '0.15',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     )
