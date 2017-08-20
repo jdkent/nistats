@@ -38,7 +38,7 @@ The required dependencies to use the software are:
 * Patsy >= 0.2.0
 
 If you are using nilearn plotting functionalities or running the
-examples, matplotlib >= 1.1.1 is required.
+examples, matplotlib >= 1.3.1 is required.
 
 If you want to run the tests, you need nose >= 1.2.1 and coverage >= 3.6.
 

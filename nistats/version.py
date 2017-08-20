@@ -58,7 +58,7 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _NISTATS_INSTALL_MSG}),
     )
 
-OPTIONAL_MATPLOTLIB_MIN_VERSION = '1.1.1'
+OPTIONAL_MATPLOTLIB_MIN_VERSION = '1.3.1'
 
 
 def _import_module_with_version_check(
