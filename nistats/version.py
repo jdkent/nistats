@@ -34,7 +34,7 @@ REQUIRED_MODULE_METADATA = (
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('scipy', {
-        'min_version': '0.11.0',
+        'min_version': '0.13.3',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('nilearn', {
