@@ -484,7 +484,8 @@ def create_second_level_design(subjects_label, confounds=None):
     if len(np.unique(design_columns)) != len(design_columns):
         raise ValueError('Design matrix columns do not have unique names')
 
-    design_matrix = pd.DataFrame(columns=design_columns)
+    # float dtype necessary for linalg
+    design_matrix = pd.DataFrame(columns=design_columns, dtype=float)
     for ridx, subject_label in enumerate(subjects_label):
         design_matrix.loc[ridx] = [0] * len(design_columns)
         design_matrix.loc[ridx, 'intercept'] = 1
@@ -502,7 +503,6 @@ def create_second_level_design(subjects_label, confounds=None):
 
     # check design matrix is not singular
     epsilon = sys.float_info.epsilon
-    design_matrix = design_matrix.apply(pd.to_numeric)  # necessary for linalg
     if np.linalg.cond(design_matrix.as_matrix()) < (1. / epsilon):
         warn('Attention: Design matrix is singular. Aberrant estimates '
              'are expected.')

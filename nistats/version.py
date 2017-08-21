@@ -30,7 +30,7 @@ _NISTATS_INSTALL_MSG = 'See %s for installation information.' % (
 #   in some meaningful order (more => less 'core'). 
 REQUIRED_MODULE_METADATA = (
     ('numpy', {
-        'min_version': '1.7.1',
+        'min_version': '1.8.2',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('scipy', {
