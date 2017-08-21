@@ -27,14 +27,14 @@ _NISTATS_INSTALL_MSG = 'See %s for installation information.' % (
     'http://nistats.github.io/introduction.html#installation')
 
 # This is a tuple to preserve order, so that dependencies are checked
-#   in some meaningful order (more => less 'core'). 
+#   in some meaningful order (more => less 'core').
 REQUIRED_MODULE_METADATA = (
     ('numpy', {
         'min_version': '1.9.0',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('scipy', {
-        'min_version': '0.13.3',
+        'min_version': '0.14.0',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('nilearn', {
