@@ -497,11 +497,12 @@ def create_second_level_design(subjects_label, confounds=None):
                 raise ValueError('confounds not specified for subject %s' %
                                  subject_label)
             for conf_name in confounds_name:
-                confounds_value = confounds[conrow][conf_name].values
+                confounds_value = confounds[conrow][conf_name].values[0]
                 design_matrix.loc[ridx, conf_name] = confounds_value
 
     # check design matrix is not singular
     epsilon = sys.float_info.epsilon
+    design_matrix = design_matrix.apply(pd.to_numeric)  # necessary for linalg
     if np.linalg.cond(design_matrix.as_matrix()) < (1. / epsilon):
         warn('Attention: Design matrix is singular. Aberrant estimates '
              'are expected.')
