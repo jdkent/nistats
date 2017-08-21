@@ -339,6 +339,14 @@ def test_first_level_models_from_bids():
         assert_true(len(models) == len(m_imgs))
         assert_true(len(models) == len(m_events))
         assert_true(len(models) == len(m_confounds))
+        # test repeated run tag error when run tag is in filenames
+        # can arise when variant or space is present and not specified
+        assert_raises(ValueError, first_level_models_from_bids,
+                      bids_path, 'main', 'T1w')  # variant not specified
+        # test more than one ses file error when run tag is not in filenames
+        # can arise when variant or space is present and not specified
+        assert_raises(ValueError, first_level_models_from_bids,
+                      bids_path, 'localizer', 'T1w')  # variant not specified
         # test issues with confound files. There should be only one confound
         # file per img. An one per image or None. Case when one is missing
         confound_files = get_bids_files(os.path.join(bids_path, 'derivatives'),
@@ -346,7 +354,6 @@ def test_first_level_models_from_bids():
         os.remove(confound_files[-1])
         assert_raises(ValueError, first_level_models_from_bids,
                       bids_path, 'main', 'MNI')
-
         # test issues with event files
         events_files = get_bids_files(bids_path, file_tag='events')
         os.remove(events_files[0])
