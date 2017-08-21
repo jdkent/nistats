@@ -33,7 +33,7 @@ The required dependencies to use the software are:
 * SciPy >= 0.13.3
 * Nibabel >= 1.2.0
 * Nilearn >= 0.2.0
-* Pandas >= 0.13
+* Pandas >= 0.17
 * Sklearn >= 0.15
 * Patsy >= 0.2.0
 

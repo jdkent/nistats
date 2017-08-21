@@ -45,7 +45,7 @@ REQUIRED_MODULE_METADATA = (
         'min_version': '1.2.0',
         'required_at_installation': False}),
     ('pandas', {
-        'min_version': '0.13.0',
+        'min_version': '0.17.0',
         'required_at_installation': True,
         'install_info': _NISTATS_INSTALL_MSG}),
     ('patsy', {
