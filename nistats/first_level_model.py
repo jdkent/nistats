@@ -424,6 +424,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             run_img = check_niimg(run_img, ensure_ndim=4)
             if design_matrices is None:
                 n_scans = run_img.get_data().shape[3]
+                self.n_scans_ = n_scans
                 if confounds is not None:
                     confounds_matrix = confounds[run_idx].values
                     if confounds_matrix.shape[0] != n_scans:
@@ -481,6 +482,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
                 for key in results:
                     results[key] = SimpleRegressionResults(results[key])
             self.results_.append(results)
+            self.Y_ = Y
             del Y
 
         # Report progress
@@ -489,6 +491,124 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
                              % (n_runs, time.time() - t0))
 
         return self
+
+    def refit_run_design(self, run_imgs, events=None, confounds=None,
+                         design_matrices=None):
+        """ Fit the GLM
+
+        For each run:
+        1. create design matrix X
+        2. do a masker job: fMRI_data -> Y
+        3. fit regression to (Y, X)
+
+        Parameters
+        ----------
+        run_imgs: Niimg-like object or list of Niimg-like objects,
+            See http://nilearn.github.io/building_blocks/manipulating_mr_images.html#niimg.
+            Data on which the GLM will be fitted. If this is a list,
+            the affine is considered the same for all.
+
+        events: pandas Dataframe or string or list of pandas DataFrames or
+                   strings,
+            fMRI events used to build design matrices. One events object
+            expected per run_img. Ignored in case designs is not None.
+            If string, then a path to a csv file is expected.
+
+        confounds: pandas Dataframe or string or list of pandas DataFrames or
+                   strings,
+            Each column in a DataFrame corresponds to a confound variable
+            to be included in the regression model of the respective run_img.
+            The number of rows must match the number of volumes in the
+            respective run_img. Ignored in case designs is not None.
+            If string, then a path to a csv file is expected.
+
+        design_matrices: pandas DataFrame or list of pandas DataFrames,
+            Design matrices that will be used to fit the GLM. If given it
+            takes precedence over events and confounds.
+
+        """
+        # Check arguments
+        # Check imgs type
+        if not isinstance(run_imgs, (list, tuple)):
+            run_imgs = [run_imgs]
+        for rimg in run_imgs:
+            if not isinstance(rimg, (_basestring, Nifti1Image)):
+                raise ValueError('run_imgs must be Niimg-like object or list'
+                                 ' of Niimg-like objects')
+        # check all information necessary to build design matrices is available
+        if design_matrices is None:
+            if events is None:
+                raise ValueError('events or design matrices must be provided')
+            if self.t_r is None:
+                raise ValueError('t_r not given to FirstLevelModel object'
+                                 ' to compute design from events')
+        else:
+            design_matrices = _check_run_tables(run_imgs, design_matrices,
+                                                'design_matrices')
+        # Check that number of events and confound files match number of runs
+        # Also check that events and confound files can be loaded as DataFrame
+        if events is not None:
+            events = _check_run_tables(run_imgs, events, 'events')
+
+        if confounds is not None:
+            confounds = _check_run_tables(run_imgs, confounds, 'confounds')
+
+        # For each run fit the model and keep only the regression results.
+        self.labels_, self.results_, self.design_matrices_ = [], [], []
+
+        # Build the experimental design for the glm
+        run_idx = 0
+        if design_matrices is None:
+            n_scans = self.n_scans_
+            if confounds is not None:
+                confounds_matrix = confounds[run_idx].values
+                if confounds_matrix.shape[0] != n_scans:
+                    raise ValueError('Rows in confounds does not match'
+                                     'n_scans in run_img at index %d'
+                                     % (run_idx,))
+                confounds_names = confounds[run_idx].columns.tolist()
+            else:
+                confounds_matrix = None
+                confounds_names = None
+            start_time = self.slice_time_ref * self.t_r
+            end_time = (n_scans - 1 + self.slice_time_ref) * self.t_r
+            frame_times = np.linspace(start_time, end_time, n_scans)
+            design = make_design_matrix(frame_times, events[run_idx],
+                                        self.hrf_model, self.drift_model,
+                                        self.period_cut, self.drift_order,
+                                        self.fir_delays, confounds_matrix,
+                                        confounds_names, self.min_onset)
+        else:
+            design = design_matrices[run_idx]
+        self.design_matrices_.append(design)
+
+        Y = self.Y_
+
+        if self.memory is not None:
+            mem_glm = self.memory.cache(run_glm, ignore=['n_jobs'])
+        else:
+            mem_glm = run_glm
+
+        # compute GLM
+        if self.verbose > 1:
+            t_glm = time.time()
+            sys.stderr.write('Performing GLM computation\r')
+        labels, results = mem_glm(Y, design.as_matrix(),
+                                  noise_model=self.noise_model,
+                                  bins=100, n_jobs=self.n_jobs)
+        if self.verbose > 1:
+            t_glm = time.time() - t_glm
+            sys.stderr.write('GLM took %d seconds         \n' % t_glm)
+
+        self.labels_.append(labels)
+        # We save memory if inspecting model details is not necessary
+        if self.minimize_memory:
+            for key in results:
+                results[key] = SimpleRegressionResults(results[key])
+        self.results_.append(results)
+
+        return self
+
 
     def compute_contrast(self, contrast_def, stat_type=None,
                          output_type='z_score'):
@@ -573,7 +693,7 @@ def first_level_models_from_bids(
         mask=None, target_affine=None, target_shape=None, smoothing_fwhm=None,
         memory=Memory(None), memory_level=1, standardize=False,
         signal_scaling=0, noise_model='ar1', verbose=0, n_jobs=1,
-        minimize_memory=True, derivatives_folder='derivatives'):
+        minimize_memory=True):
     """Create FirstLevelModel objects and fit arguments from a BIDS dataset.
 
     It t_r is not specified this function will attempt to load it from a
@@ -599,10 +719,6 @@ def first_level_models_from_bids(
         Possible filters are 'acq', 'rec', 'run', 'res' and 'variant'.
         Filter examples would be (variant, smooth), (acq, pa) and
         (res, 1x1x1).
-
-    derivatives_folder: str, optional
-        derivatives and app folder path containing preprocessed files.
-        Like "derivatives/FMRIPREP". default is simply "derivatives".
 
     All other parameters correspond to a `FirstLevelModel` object, which
     contains their documentation. The subject label of the model will be
@@ -650,7 +766,7 @@ def first_level_models_from_bids(
                              "are allowed." % type(img_filter[0]))
 
     # check derivatives folder is present
-    derivatives_path = os.path.join(dataset_path, derivatives_folder)
+    derivatives_path = os.path.join(dataset_path, 'derivatives')
     if not os.path.exists(derivatives_path):
         raise ValueError('derivatives folder does not exist in given dataset')
 
@@ -699,8 +815,8 @@ def first_level_models_from_bids(
                      img_specs[0])
 
     # Infer subjects in dataset
-    sub_folders = glob.glob(os.path.join(derivatives_path, 'sub-*/'))
-    sub_labels = [os.path.basename(s[:-1]).split('-')[1] for s in sub_folders]
+    sub_folders = glob.glob(os.path.join(derivatives_path, 'sub-*'))
+    sub_labels = [os.path.basename(s).split('-')[1] for s in sub_folders]
     sub_labels = sorted(list(set(sub_labels)))
 
     # Build fit_kwargs dictionaries to pass to their respective models fit
@@ -736,8 +852,7 @@ def first_level_models_from_bids(
         if len(imgs) > 1:
             for img in imgs:
                 img_dict = parse_bids_filename(img)
-                if ('_ses-' in img_dict['file_basename'] and
-                        '_run-' in img_dict['file_basename']):
+                if '_ses-' in img_dict['file_basename']:
                     if (img_dict['ses'], img_dict['run']) in run_check_list:
                         raise ValueError(
                             'More than one nifti image found for the same run '
@@ -748,19 +863,7 @@ def first_level_models_from_bids(
                     else:
                         run_check_list.append((img_dict['ses'],
                                               img_dict['run']))
-
-                elif '_ses-' in img_dict['file_basename']:
-                    if img_dict['ses'] in run_check_list:
-                        raise ValueError(
-                            'More than one nifti image found for the same ses '
-                            '%s, while no additional run specification present'
-                            '. Please verify that the preproc_variant and '
-                            'space_label labels were correctly specified.' %
-                            img_dict['ses'])
-                    else:
-                        run_check_list.append(img_dict['ses'])
-
-                elif '_run-' in img_dict['file_basename']:
+                else:
                     if img_dict['run'] in run_check_list:
                         raise ValueError(
                             'More than one nifti image found for the same run '
@@ -776,22 +879,28 @@ def first_level_models_from_bids(
         for img_filter in img_filters:
             if img_filter[0] in ['acq', 'rec', 'run']:
                 filters.append(img_filter)
-
-        # Get events files
-        events = get_bids_files(dataset_path, modality_folder='func',
-                                file_tag='events', file_type='tsv',
-                                sub_label=sub_label, filters=filters)
-        if events:
-            if len(events) != len(imgs):
-                raise ValueError('%d events.tsv files found for %d bold '
-                                 'files. Same number of event files as '
-                                 'the number of runs is expected' %
-                                 (len(events), len(imgs)))
-            events = [pd.read_csv(event, sep='\t', index_col=None)
-                      for event in events]
-            models_events.append(events)
-        else:
-            import pdb; pdb.set_trace()  # breakpoint b528d9db //
+        # Get events. If not found in derivatives check for original data.
+        # There might be no need to preprocess events to specify model, still
+        # throw a warning
+        for possible_path in [derivatives_path, dataset_path]:
+            events = get_bids_files(possible_path, modality_folder='func',
+                                    file_tag='events', file_type='tsv',
+                                    sub_label=sub_label, filters=filters)
+            if events:
+                if len(events) != len(imgs):
+                    raise ValueError('%d events.tsv files found for %d bold '
+                                     'files. Same number of event files as '
+                                     'the number of runs is expected' %
+                                     (len(events), len(imgs)))
+                events = [pd.read_csv(event, sep='\t', index_col=None)
+                          for event in events]
+                if possible_path == dataset_path:
+                    warn('events taken from directory containing raw data. '
+                         'Is it the case that there was no need to preprocess '
+                         'the events for the model?')
+                models_events.append(events)
+                break
+        if not events:
             raise ValueError('No events.tsv files found')
 
         # Get confounds. If not found it will be assumed there are none.
@@ -799,7 +908,7 @@ def first_level_models_from_bids(
         confounds = get_bids_files(derivatives_path, modality_folder='func',
                                    file_tag='confounds', file_type='tsv',
                                    sub_label=sub_label, filters=filters)
-
+        print(len(confounds), len(imgs))
         if confounds:
             if len(confounds) != len(imgs):
                 raise ValueError('%d confounds.tsv files found for %d bold '
