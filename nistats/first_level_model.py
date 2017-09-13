@@ -693,7 +693,7 @@ def first_level_models_from_bids(
         mask=None, target_affine=None, target_shape=None, smoothing_fwhm=None,
         memory=Memory(None), memory_level=1, standardize=False,
         signal_scaling=0, noise_model='ar1', verbose=0, n_jobs=1,
-        minimize_memory=True):
+        minimize_memory=True, derivatives_folder='derivatives')):
     """Create FirstLevelModel objects and fit arguments from a BIDS dataset.
 
     It t_r is not specified this function will attempt to load it from a
@@ -766,7 +766,7 @@ def first_level_models_from_bids(
                              "are allowed." % type(img_filter[0]))
 
     # check derivatives folder is present
-    derivatives_path = os.path.join(dataset_path, 'derivatives')
+    derivatives_path = os.path.join(dataset_path, derivatives_folder)
     if not os.path.exists(derivatives_path):
         raise ValueError('derivatives folder does not exist in given dataset')
 
