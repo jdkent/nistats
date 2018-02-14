@@ -8,7 +8,7 @@ import numpy as np
 from nilearn.input_data import NiftiMasker
 from scipy.ndimage import label
 from scipy.stats import norm
-from nistats.utils import get_data
+from nilearn.input_data import NiftiMasker
 
 
 def fdr_threshold(z_vals, alpha):
@@ -130,4 +130,4 @@ def map_threshold(stat_img=None, mask_img=None, alpha=.001, threshold=3.,
         if np.sum(labels == label_) < cluster_threshold:
             stats[labels == label_] = 0
 
-    return masker.inverse_transform(stats), threshold
+    return masker.inverse_transform(stats), z_th
