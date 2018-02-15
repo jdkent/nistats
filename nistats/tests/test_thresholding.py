@@ -10,11 +10,10 @@ from numpy.testing import (assert_almost_equal,
                            assert_equal,
                            )
 from scipy.stats import norm
-
-from nistats.thresholding import (fdr_threshold,
-                                  map_threshold,
-                                  )
-from nistats.utils import get_data
+from nose.tools import assert_true
+from numpy.testing import assert_almost_equal, assert_equal
+import nibabel as nib
+from nistats.thresholding import fdr_threshold, map_threshold
 
 
 def test_fdr():
@@ -81,26 +80,3 @@ def test_map_threshold():
         cluster_threshold=0)
     vals = get_data(th_map)
     assert_equal(np.sum(vals > 0), 8)
-
-    # test 7 without a map
-    th_map, threshold = map_threshold(
-        None, None, threshold=3.0, height_control=None,
-        cluster_threshold=0)
-    assert_equal(threshold, 3.0)
-    assert_equal(th_map, None)
-
-    th_map, threshold = map_threshold(
-        None, None, alpha=0.05, height_control='fpr',
-        cluster_threshold=0)
-    assert (threshold > 1.64)
-    assert_equal(th_map, None)
-
-    assert_raises(ValueError, map_threshold, None, None, alpha=0.05,
-                  height_control='fdr')
-    assert_raises(ValueError, map_threshold, None, None, alpha=0.05,
-                  height_control='bonferroni')
-
-    # test 8 wrong procedure
-    assert_raises(ValueError, map_threshold, None, None, alpha=0.05,
-              height_control='plop')
-    
