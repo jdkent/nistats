@@ -49,7 +49,11 @@ REQUIRED_MODULE_METADATA = (
     ('pandas', {
         'min_version': '0.18.0',
         'install_info': _NISTATS_INSTALL_MSG}),
-)
+    ('skimage', {
+        'min_version': '0.13.0',
+        'required_at_installation': True,
+        'install_info': _NISTATS_INSTALL_MSG}),
+    )
 
 OPTIONAL_MATPLOTLIB_MIN_VERSION = '1.5.1'
 OPTIONAL_BOTO3_MIN_VERSION = '1.4.0'
