@@ -358,14 +358,16 @@ class SimpleRegressionResults(RegressionResults):
                          "And can therefore not calculate logL."
                         "If needed, use the RegressionResults class.")
 
-    def resid(self, Y):
+    @property
+    def resid(self):
         """
         Residuals from the fit.
         """
         raise ValueError("SimpleRegressionResult does not store residuals."
                         "If needed, use the RegressionResults class.")
 
-    def norm_resid(self, Y):
+    @property
+    def norm_resid(self):
         raise ValueError("SimpleRegressionResult does not store residuals."  
                         "If needed, use the RegressionResults class.")
 
