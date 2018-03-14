@@ -585,6 +585,47 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         return outputs if output_type == 'all' else output
 
+    def get_voxelwise_model_attribute_(self, attribute, timeseries=True):
+        
+        if self.minimize_memory:
+            raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+        
+        if self.labels_ is None or self.results_ is None:
+            raise ValueError('The model has not been fit yet')
+        
+        output = []
+        
+        for design_matrix, labels, results in zip(self.design_matrices_, self.labels_, self.results_):        
+            
+            if timeseries:
+                voxelwise_attribute = np.zeros((design_matrix.shape[0], len(labels)))
+            else:
+                voxelwise_attribute = np.zeros((1, len(labels)))
+            
+            for label_ in results:
+                label_mask = labels == label_            
+                voxelwise_attribute[:, label_mask] = getattr(results[label_], attribute)
+            
+            
+            output.append(self.masker_.inverse_transform(voxelwise_attribute))
+
+        if len(output) == 1:
+            return output[0]
+        else:
+            return output
+
+    @property
+    def residuals(self):
+        return self.get_voxelwise_model_attribute_('resid')
+
+    @property
+    def predicted(self):
+        return self.get_voxelwise_model_attribute_('predicted')
+
+    @property
+    def rsq(self):
+        return self.get_voxelwise_model_attribute_('rsq', timeseries=False)
+
 
 @replace_parameters({'mask': 'mask_img'}, end_version='next')
 def first_level_models_from_bids(

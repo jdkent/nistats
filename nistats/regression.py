@@ -321,6 +321,13 @@ class RegressionResults(LikelihoodModelResults):
         return (self.wresid ** 2).sum(0)
 
     @property
+    def rsq(self):
+        """Proportion of explained variance. 
+        If not from an OLS model this is "pseudo"-R2.
+        """
+        return np.var(self.predicted, 0) / np.var(self.wY, 0)
+
+    @property
     def MSE(self):
         """ Mean square (error) """
         return self.SSE / self.df_resid
