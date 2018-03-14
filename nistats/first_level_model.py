@@ -300,15 +300,17 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             self.memory = memory
         self.memory_level = memory_level
         self.standardize = standardize
+
         if signal_scaling is False:
             self.signal_scaling = signal_scaling
-        elif signal_scaling in [0, 1, (0, 1)]:
+        elif (type(signal_scaling) is not bool) and (signal_scaling in [0, 1, (0, 1)]):
             self.scaling_axis = signal_scaling
             self.signal_scaling = True
             self.standardize = False
         else:
             raise ValueError('signal_scaling must be "False", "0", "1"'
                              ' or "(0, 1)"')
+
         self.noise_model = noise_model
         self.verbose = verbose
         self.n_jobs = n_jobs
