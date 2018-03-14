@@ -278,14 +278,14 @@ class RegressionResults(LikelihoodModelResults):
         self.wresid = wresid
         self.wdesign = model.wdesign
 
-    @setattr_on_read
+    @property
     def resid(self):
         """
         Residuals from the fit.
         """
         return self.Y - self.predicted
 
-    @setattr_on_read
+    @property
     def norm_resid(self):
         """
         Residuals, normalized to have unit length.
@@ -305,7 +305,7 @@ class RegressionResults(LikelihoodModelResults):
         """
         return self.resid * positive_reciprocal(np.sqrt(self.dispersion))
 
-    @setattr_on_read
+    @property
     def predicted(self):
         """ Return linear predictor values from a design matrix.
         """
@@ -314,20 +314,20 @@ class RegressionResults(LikelihoodModelResults):
         X = self.wdesign
         return np.dot(X, beta)
 
-    @psetattr_on_readroperty
+    @setattr_on_read
     def SSE(self):
         """Error sum of squares. If not from an OLS model this is "pseudo"-SSE.
         """
         return (self.wresid ** 2).sum(0)
 
-    @psetattr_on_readroperty
+    @setattr_on_read
     def rsq(self):
         """Proportion of explained variance. 
         If not from an OLS model this is "pseudo"-R2.
         """
         return np.var(self.predicted, 0) / np.var(self.wY, 0)
 
-    @psetattr_on_readroperty
+    @setattr_on_read
     def MSE(self):
         """ Mean square (error) """
         return self.SSE / self.df_resid
@@ -373,3 +373,16 @@ class SimpleRegressionResults(RegressionResults):
     @setattr_on_read
     def norm_resid(self):
         raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+
+    @setattr_on_read
+    def norm_resid(self, Y):
+        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+
+    @setattr_on_read
+    def predicted(self):
+        """ Return linear predictor values from a design matrix.
+        """
+        beta = self.theta
+        # the LikelihoodModelResults has parameters named 'theta'
+        X = self.model.design
+        return np.dot(X, beta)
