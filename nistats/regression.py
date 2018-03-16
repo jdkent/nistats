@@ -361,7 +361,7 @@ class SimpleRegressionResults(RegressionResults):
         """
         The maximized log-likelihood
         """
-        raise ValueError("SimpleRegressionResult does not store residuals."
+        raise ValueError("SimpleRegressionResults does not store residuals."
                          "And can therefore not calculate logL."
                         "If needed, use the RegressionResults class.")
 
@@ -370,11 +370,11 @@ class SimpleRegressionResults(RegressionResults):
         """
         Residuals from the fit.
         """
-        raise ValueError("SimpleRegressionResult does not store residuals."
+        raise ValueError("SimpleRegressionResults does not store residuals."
                         "If needed, use the RegressionResults class.")
 
     @property
     def norm_resid(self):
-        raise ValueError("SimpleRegressionResult does not store residuals."  
+        raise ValueError("SimpleRegressionResults does not store residuals."  
                         "If needed, use the RegressionResults class.")
 
