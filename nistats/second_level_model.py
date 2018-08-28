@@ -331,7 +331,6 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             from second_level_input.
             Ensure that the order of maps given by a second_level_input
             list of Niimgs matches the order of the rows in the design matrix.
-
         """
         # check second_level_input
         _check_second_level_input(second_level_input, design_matrix,
@@ -341,7 +340,9 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         _check_confounds(confounds)
 
         # check design matrix
-        _check_design_matrix(design_matrix)
+        if design_matrix is not None:
+            if not isinstance(design_matrix, pd.DataFrame):
+                raise ValueError('design matrix must be a pandas DataFrame')
 
         # sort a pandas dataframe by subject_label to avoid inconsistencies
         # with the design matrix row order when automatically extracting maps
@@ -419,14 +420,17 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         Parameters
         ----------
         second_level_contrast: str or array of shape (n_col), optional
-            Where ``n_col`` is the number of columns of the design matrix. The
-            string can be a formula compatible with `pandas.DataFrame.eval`.
-            Basically one can use the name of the conditions as they appear in
-            the design matrix of the fitted model combined with operators +-
-            and combined with numbers with operators +-`*`/. The default (None)
-            is accepted if the design matrix has a single column, in which case
-            the only possible contrast array([1]) is applied; when the design
-            matrix has multiple columns, an error is raised.
+            Where ``n_col`` is the number of columns of the design matrix,
+            The string can be a formula compatible with the linear constraint
+            of the Patsy library. Basically one can use the name of the
+            conditions as they appear in the design matrix of
+            the fitted model combined with operators /*+- and numbers.
+            Please check the patsy documentation for formula examples:
+            http://patsy.readthedocs.io/en/latest/API-reference.html#patsy.DesignInfo.linear_constraint
+            The default (None) is accepted if the design matrix has a single
+            column, in which case the only possible contrast array([1]) is
+            applied; when the design matrix has multiple columns, an error is
+            raised.
 
         first_level_contrast: str or array of shape (n_col) with respect to
                               FirstLevelModel, optional
@@ -456,13 +460,29 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         if self.second_level_input_ is None:
             raise ValueError('The model has not been fit yet')
 
-        # check first_level_contrast
-        _check_first_level_contrast(self.second_level_input_,
-                                    first_level_contrast)
+        # first_level_contrast check
+        if isinstance(self.second_level_input_[0], FirstLevelModel):
+            if first_level_contrast is None:
+                raise ValueError('If second_level_input was a list of '
+                                 'FirstLevelModel, then first_level_contrast '
+                                 'is mandatory. It corresponds to the '
+                                 'second_level_contrast argument of the '
+                                 'compute_contrast method of FirstLevelModel')
 
-        # check contrast and obtain con_val
-        con_val = _get_con_val(second_level_contrast, self.design_matrix_)
-
+        # check contrast definition
+        if second_level_contrast is None:
+            if self.design_matrix_.shape[1] == 1:
+                second_level_contrast = np.ones([1])
+            else:
+                raise ValueError('No second-level contrast is specified.')
+        if isinstance(second_level_contrast, np.ndarray):
+            con_val = second_level_contrast
+            if np.all(con_val == 0):
+                raise ValueError('Contrast is null')
+        else:
+            design_info = DesignInfo(self.design_matrix_.columns.tolist())
+            constraint = design_info.linear_constraint(second_level_contrast)
+            con_val = constraint.coefs
         # check output type
         # 'all' is assumed to be the final entry;
         # if adding more, place before 'all'
