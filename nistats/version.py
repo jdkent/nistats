@@ -30,7 +30,7 @@ _NISTATS_INSTALL_MSG = 'See %s for installation information.' % (
 #   in some meaningful order (more => less 'core').
 REQUIRED_MODULE_METADATA = (
     ('numpy', {
-        'min_version': '1.11',
+        'min_version': '1.11.2',
         'install_info': _NISTATS_INSTALL_MSG}),
     ('scipy', {
         'min_version': '0.17',
@@ -48,6 +48,9 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _NISTATS_INSTALL_MSG}),
     ('pandas', {
         'min_version': '0.18.0',
+        'install_info': _NISTATS_INSTALL_MSG}),
+    ('patsy', {
+        'min_version': '0.4.1',
         'install_info': _NISTATS_INSTALL_MSG}),
     )
 
