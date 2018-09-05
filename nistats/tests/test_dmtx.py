@@ -433,41 +433,29 @@ def test_fir_block():
     assert_true((X[idx + 3, 7] == 1).all())
 
 def test_oversampling():
-    events = basic_paradigm()
+    paradigm = basic_paradigm()
     frame_times = np.linspace(0, 127, 128)
-    X1 = make_first_level_design_matrix(
-        frame_times, events, drift_model=None)
-    X2 = make_first_level_design_matrix(
-        frame_times, events, drift_model=None, oversampling=50)
-    X3 = make_first_level_design_matrix(
-        frame_times, events, drift_model=None, oversampling=10)
+    X1 = make_design_matrix(
+        frame_times, paradigm, drift_model=None)
+    X2 = make_design_matrix(
+        frame_times, paradigm, drift_model=None, oversampling=16)
+    X3 = make_design_matrix(
+        frame_times, paradigm, drift_model=None, oversampling=10)
 
-    # oversampling = 50 by default so X2 = X1, X3 \neq X1, X3 close to X2
+    # oversampling = 16 is the default so X2 = X1, X3 \neq X1, X3 close to X2
     assert_almost_equal(X1.values, X2.values)
     assert_almost_equal(X2.values, X3.values, 0)
-    assert_true(np.linalg.norm(X2.values - X3.values)
-                / np.linalg.norm(X2.values) > 1.e-4)
+    assert_true(np.linalg.norm(X2.values - X3.values) / np.linalg.norm(X2.values) > 1.e-4)
 
     # fir model, oversampling is forced to 1
-    X4 = make_first_level_design_matrix(
-        frame_times, events, hrf_model='fir', drift_model=None,
+    X4 = make_design_matrix(
+        frame_times, paradigm, hrf_model='fir', drift_model=None,
         fir_delays=range(0, 4), oversampling=1)
-    X5 = make_first_level_design_matrix(
-        frame_times, events, hrf_model='fir', drift_model=None,
-        fir_delays=range(0, 4), oversampling=10)
+    X5 = make_design_matrix(
+        frame_times, paradigm, hrf_model='fir', drift_model=None,
+        fir_delays=range(0, 4), oversampling=3)
     assert_almost_equal(X4.values, X5.values)
 
-    
-def test_high_pass():
-    """ test that high-pass values lead to reasonable design matrices"""
-    n_frames = 128
-    tr = 2.0
-    frame_times = np.arange(0, tr * n_frames, tr)
-    X = make_first_level_design_matrix(
-        frame_times, drift_model='Cosine', high_pass=1.)
-    assert X.shape[1] == n_frames
-
-    
 def test_csv_io():
     # test the csv io on design matrices
     tr = 1.0
