@@ -7,9 +7,6 @@ not whether it is exact.
 
 import os
 
-import numpy as np
-import pandas as pd
-
 from nose.tools import assert_true
 
 
@@ -74,6 +71,6 @@ def test_read_events():
                      modulated_event_paradigm(),
                      modulated_block_paradigm(),
                      basic_paradigm()):
-        csvfile = write_events(events, tmpdir)
-        read_paradigm = pd.read_table(csvfile)
-        assert_true((read_paradigm['onset'] == events['onset']).all())
+        csvfile = write_paradigm(paradigm, tmpdir)
+        read_paradigm = pd.read_csv(csvfile)
+        assert_true((read_paradigm['onset'] == paradigm['onset']).all())
