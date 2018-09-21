@@ -206,7 +206,7 @@ def test_hkernel():
     h = _hrf_kernel('fir', tr, fir_delays=np.arange(4))
     assert_equal(len(h), 4)
     for dh in h:
-        assert_almost_equal(dh.sum(), 1.)
+        assert_equal(dh.sum(), 50.)
     # 
     h = _hrf_kernel(None, tr)
     assert_equal(len(h), 1)
