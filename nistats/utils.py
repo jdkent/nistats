@@ -3,7 +3,6 @@
 Authors: Bertrand Thirion, Matthew Brett, 2015
 """
 import csv
-from pathlib import Path
 import sys
 
 from warnings import warn
@@ -186,7 +185,8 @@ def _verify_delimiters_used(filepaths, delimiters=None):
     filepaths = [filepaths] if isinstance(filepaths, str) else filepaths
     for filepath_ in filepaths:
         try:
-            sample = Path(filepath_).read_text()
+            with open(filepath_, 'r') as svfile:
+                sample = svfile.read()
         except (IsADirectoryError, FileNotFoundError):
             raise FileNotFoundError('Not a valid filepath, or file does not exist.', filepath_)
         except TypeError:
@@ -194,7 +194,7 @@ def _verify_delimiters_used(filepaths, delimiters=None):
 
         try:
             csv.Sniffer().sniff(sample=sample, delimiters=delimiters,)
-        except csv.Error as csv_err:
+        except csv.Error:
             raise csv.Error(filepath_)
 
 def _verify_file_value_separators_are_tabs_commas(filepaths):
