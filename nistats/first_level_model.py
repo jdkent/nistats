@@ -10,7 +10,6 @@ Author: Bertrand Thirion, Martin Perez-Guevara, 2016
 """
 
 from warnings import warn
-import csv
 import time
 import sys
 import os
@@ -38,7 +37,7 @@ from .regression import OLSModel, ARModel, SimpleRegressionResults
 from .design_matrix import make_design_matrix
 from .contrasts import _fixed_effect_contrast
 from .utils import (_basestring, _check_run_tables,
-                    _verify_file_value_separators_are_tabs_commas,
+                    _verify_events_file_uses_valid_value_separators,
                     get_bids_files, parse_bids_filename)
 
 
@@ -355,7 +354,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         # Check arguments
         # Check imgs type
         if events is not None:
-            _check_events_file_uses_tab_separators(
+            _verify_events_file_uses_valid_value_separators(
                 events_files=events)
         if not isinstance(run_imgs, (list, tuple)):
             run_imgs = [run_imgs]
@@ -371,7 +370,6 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         # Check that number of events and confound files match number of runs
         # Also check that events and confound files can be loaded as DataFrame
         if events is not None:
-            _verify_file_value_separators_are_tabs_commas(filepaths=events)
             events = _check_run_tables(run_imgs, events, 'events')
         if confounds is not None:
             confounds = _check_run_tables(run_imgs, confounds, 'confounds')

@@ -78,57 +78,16 @@ def _check_and_load_tables(tables_, var_name):
     return tables
 
 
-def _check_events_file_uses_tab_separators(events_files):
-    """
-    Raises a ValueError if provided list of text based data files
-    (.csv, .tsv, etc) do not enforce the BIDS convention of using Tabs
-    as separators.
-
-    Only scans their first row.
-    Does nothing if:
-        If the separator used is BIDS compliant.
-        Paths are invalid.
-        File(s) are not text files.
-
-    Does not flag comma-separated-values-files for compatibility reasons;
-    this may change in future as commas are not BIDS compliant.
-
-    parameters
-    ----------
-    events_files: str, List/Tuple[str]
-        A single file's path or a collection of filepaths.
-        Files are expected to be text files.
-        Non-text files will raise ValueError.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    ValueError:
-        If value separators are not Tabs (or commas)
-    """
+def _verify_events_file_uses_valid_value_separators(events_files):
     valid_separators = [',', '\t']
-    if not isinstance(events_files, (list, tuple)):
-        events_files = [events_files]
+    events_files = [events_files] if isinstance(events_files, str) else events_files
     for events_file_ in events_files:
         try:
             with open(events_file_, 'r') as events_file_obj:
-                events_file_sample = events_file_obj.readline()
-            '''
-            The following errors are not being handled here,
-            as they are handled elsewhere in the calling code.
-            Handling them here will beak the calling code,
-            and refactoring that is not straighforward.
-            '''
-        except TypeError as type_err:  # events is Pandas dataframe.
+                events_file_sample = events_file_obj.read(1024)
+        except TypeError as err:
             pass
-        except UnicodeDecodeError as unicode_err:  # py3:if binary file
-            raise ValueError('The file does not seem to be '
-                             'a valid unicode text file.'
-                             )
-        except IOError as io_err:  # if invalid filepath.
+        except IOError:
             pass
         else:
             try:
@@ -137,11 +96,8 @@ def _check_events_file_uses_tab_separators(events_files):
                                     )
             except csv.Error:
                 raise ValueError(
-                        'The values in the events file '
-                        'are not separated by tabs; '
-                        'please enforce BIDS conventions',
-                        events_file_
-                        )
+                    'The values in the events file are not separated by tabs or commas',
+                    events_file_)
 
 
 def _check_run_tables(run_imgs, tables_, tables_name):
@@ -153,79 +109,7 @@ def _check_run_tables(run_imgs, tables_, tables_name):
     return tables_
 
 
-def _verify_delimiters_used(filepaths, delimiters=None):
-    """ Accepts a list of filepaths and verifies the delimiter used.
-    Raises an error if they do not use one of the specified delimiters
-    or if the file cannot be read.
-    If no delimiters specified,
-    checks for presence of any standard delimiter.
-    
-    Parameters
-    ----------
-    filepaths: list[str],
-        A list/tuple of filepaths of files to be verified.
-        
-    delimiters: list[str], None (default)
-        A list/tuple of allowed characters for separating values.
-        If None, will check for presence of any standard delimiter.
 
-    Returns
-    -------
-        None
-
-    Raises
-    ------
-    ValueError:
-        If the file does not use one of the indicated delimiters.
-    TypeError:
-        If the filepath points to a non-text file (usually a csv or tsv).
-    FileNotFoundError:
-        If the filepath is incorrect or the file does not exist.
-    """
-    filepaths = [filepaths] if isinstance(filepaths, str) else filepaths
-    for filepath_ in filepaths:
-        try:
-            with open(filepath_, 'r') as svfile:
-                sample = svfile.read()
-        except (IsADirectoryError, FileNotFoundError):
-            raise FileNotFoundError(
-                    'Not a valid filepath, or file does not exist.', filepath_
-                    )
-        except TypeError:
-            raise TypeError('Not a readable text file.', filepath_)
-
-        try:
-            csv.Sniffer().sniff(sample=sample, delimiters=delimiters,)
-        except csv.Error:
-            raise csv.Error(filepath_)
-
-def _verify_file_value_separators_are_tabs_commas(filepaths):
-    """
-    Accepts list/tuple of paths for events files (tsv or csv) and
-    verifies they use only tabs or commas to spearate their values.
-    
-    Parameters
-    ----------
-    filepaths: List[str], Tuple[str]
-    
-    Returns
-    -------
-        None
-        
-    Raises
-    ------
-        ValueError:
-            If tabs or commas are not the detected separators.
-    """
-    valid_delimiters = [',', '\t', ]
-    try:
-        _verify_delimiters_used(filepaths=filepaths, delimiters=valid_delimiters)
-    except (FileNotFoundError, TypeError):
-        pass
-    except csv.Error as err:
-        raise ValueError('The provided text file does not seem to use '
-                         'either tabs or commas for separating values '
-                         , err.args) from err
 
 
 def z_score(pvalue):
