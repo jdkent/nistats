@@ -56,10 +56,13 @@ def check_events(events):
     n_events = len(onset)
     trial_type = np.array(events['trial_type'])
     modulation = np.ones(n_events)
-    if 'trial_type' not in events.keys():
-        warnings.warn("'trial_type' column not found in the given events data.")
-        trial_type = np.repeat('dummy', n_events)
-    if 'modulation' in events.keys():
-        warnings.warn("'modulation' column found in the given events data.")
-        modulation = np.array(events['modulation']).astype(np.float)
+    if 'trial_type' in paradigm.keys():
+        warnings.warn("'trial_type' key found in the given paradigm.")
+        trial_type = np.array(paradigm['trial_type'])
+    if 'duration' in paradigm.keys():
+        warnings.warn("'duration' key found in the given paradigm.")
+        duration = np.array(paradigm['duration']).astype(np.float)
+    if 'modulation' in paradigm.keys():
+        warnings.warn("'modulation' key found in the given paradigm.")
+        modulation = np.array(paradigm['modulation']).astype(np.float)
     return trial_type, onset, duration, modulation
