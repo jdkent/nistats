@@ -46,22 +46,18 @@ def check_events(events):
         Per-event modulation, (in seconds)
         defaults to ones(n_events) when no duration is provided
     """
-    if 'onset' not in events.keys():
-        raise ValueError('The provided events data has no onset column.')
-    if 'duration' not in events.keys():
-        raise ValueError('The provided events data has no duration column.')
+    if 'onset' not in paradigm.keys():
+        raise ValueError('The provided paradigm has no onset key')
+    if 'duration' not in paradigm.keys():
+        raise ValueError('The provided paradigm has no duration key')
 
-    onset = np.array(events['onset'])
-    duration = np.array(events['duration']).astype(np.float)
+    onset = np.array(paradigm['onset'])
+    duration = np.array(paradigm['duration']).astype(np.float)
     n_events = len(onset)
-    trial_type = np.array(events['trial_type'])
+    trial_type = np.repeat('dummy', n_events)
     modulation = np.ones(n_events)
-    if 'trial_type' in paradigm.keys():
-        warnings.warn("'trial_type' key found in the given paradigm.")
-        trial_type = np.array(paradigm['trial_type'])
-    if 'duration' in paradigm.keys():
-        warnings.warn("'duration' key found in the given paradigm.")
-        duration = np.array(paradigm['duration']).astype(np.float)
+    if 'trial_type' not in paradigm.keys():
+        warnings.warn("'trial_type' key not found in the given paradigm.")
     if 'modulation' in paradigm.keys():
         warnings.warn("'modulation' key found in the given paradigm.")
         modulation = np.array(paradigm['modulation']).astype(np.float)
