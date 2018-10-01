@@ -8,21 +8,17 @@ import glob
 import json
 import os
 import re
-import warnings
 
+from botocore.handlers import disable_signing
 import nibabel as nib
-import numpy as np
 import pandas as pd
 from nilearn.datasets.utils import (_fetch_file,
                                     _fetch_files,
                                     _get_dataset_dir,
                                     _uncompress_file,
                                     )
-from scipy.io import loadmat
-from scipy.io.matlab.miobase import MatReadError
 from sklearn.datasets.base import Bunch
 
-from nistats.utils import get_data
 
 SPM_AUDITORY_DATA_FILES = ["fM00223/fM00223_%03i.img" % index
                            for index in range(4, 100)]
@@ -306,6 +302,29 @@ def fetch_openneuro_dataset(
     return data_dir, sorted(downloaded)
 
 
+def _make_localizer_first_level_paradigm_file_bids_compliant(paradigm_file):
+    """ Makes the first-level localizer fMRI dataset events file
+    BIDS compliant. Overwrites the original file.
+        Adds headers in first row.
+        Removes first column (spurious data).
+        Uses Tab character as value separator.
+    
+    Parameters
+    ----------
+    paradigm_file: string
+        path to the localizer_first_level dataset's events file.
+    
+    Returns
+    -------
+    None
+    """
+    paradigm = pd.read_csv(paradigm_file, sep=' ', header=None, index_col=None,
+                           names=['session', 'trial_type', 'onset'],
+                           )
+    paradigm.drop(labels='session', axis=1, inplace=True)
+    paradigm.to_csv(paradigm_file, sep='\t', index=False)
+
+
 def fetch_localizer_first_level(data_dir=None, verbose=1):
     """ Download a first-level localizer fMRI dataset
 
@@ -333,9 +352,14 @@ def fetch_localizer_first_level(data_dir=None, verbose=1):
     dataset_name = 'localizer_first_level'
     data_dir = _get_dataset_dir(dataset_name, data_dir=data_dir,
                                 verbose=verbose)
-    files = _fetch_files(data_dir, filenames, verbose=verbose)
+    sub_files = _fetch_files(data_dir, options, resume=True,
+                             verbose=verbose)
 
-    params = dict(list(zip(options, files)))
+    params = dict(zip(sorted(files.keys()), sub_files))
+    _make_localizer_first_level_paradigm_file_bids_compliant(paradigm_file=
+                                                             params['paradigm']
+                                                             )
+    
     return Bunch(**params)
 
 
