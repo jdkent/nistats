@@ -32,14 +32,14 @@ subject_data = fetch_spm_multimodal_fmri()
 # Timing and design matrix parameter specification
 tr = 2.  # repetition time, in seconds
 slice_time_ref = 0.  # we will sample the design matrix at the beggining of each acquisition
-drift_model = 'Cosine'  # We use a discrete cosin transform to model signal drifts.
-high_pass = .01  # The cutoff for the drift model is 0.01 Hz.
+drift_model = 'Cosine'  # We use a discrete cosin transform to model signal drifts. 
+period_cut = 128.  # The cutoff for the drift model is 1/128 Hz.
 hrf_model = 'spm + derivative'  # The hemodunamic response finction is the SPM canonical one
 
 #########################################################################
 # Resample the images.
 #
-# This is achieved by the concat_imgs function of Nilearn.
+# This is achieved by the concat_imgs function of Nilearn. 
 from nilearn.image import concat_imgs, resample_img, mean_img
 fmri_img = [concat_imgs(subject_data.func1, auto_resample=True),
             concat_imgs(subject_data.func2, auto_resample=True)]
@@ -54,28 +54,38 @@ mean_image = mean_img(fmri_img)
 #########################################################################
 # Make design matrices
 import numpy as np
+from scipy.io import loadmat
 import pandas as pd
-from nistats.design_matrix import make_first_level_design_matrix
+from nistats.design_matrix import make_design_matrix
 design_matrices = []
 
 #########################################################################
 # loop over the two sessions
-for idx, img in enumerate(fmri_img, start=1):
-    # Build experimental paradigm
-    n_scans = img.shape[-1]
-    events = pd.read_table(subject_data['events{}'.format(idx)])
+for idx in range(len(fmri_img)):
+    # The following manipulations are meant to build a valid events descriptor
+    # define the onset times of the vents
+    n_scans = fmri_img[idx].shape[-1]
+    timing = loadmat(getattr(subject_data, "trials_ses%i" % (idx + 1)),
+                     squeeze_me=True, struct_as_record=False)
+    faces_onsets = timing['onsets'][0].ravel()
+    scrambled_onsets = timing['onsets'][1].ravel()
+    onsets = np.hstack((faces_onsets, scrambled_onsets))
+    onsets *= tr  # because onsets were reporting in 'scans' units
+
+    # define the events trial type
+    conditions = (['faces'] * len(faces_onsets) +
+                  ['scrambled'] * len(scrambled_onsets))
+    # make a paradigm out of it
+    paradigm = pd.DataFrame({'trial_type': conditions, 'onset': onsets})
+    
     # Define the sampling times for the design matrix
     frame_times = np.arange(n_scans) * tr
     # Build design matrix with the reviously defined parameters
-    design_matrix = make_first_level_design_matrix(
-            frame_times,
-            events,
-            hrf_model=hrf_model,
-            drift_model=drift_model,
-            high_pass=high_pass,
-            )
+    design_matrix = make_design_matrix(
+        frame_times, paradigm, hrf_model=hrf_model, drift_model=drift_model,
+        period_cut=period_cut)
 
-    # put the design matrices in a list
+    # put the design matrices in a list 
     design_matrices.append(design_matrix)
 
 #########################################################################
@@ -86,12 +96,10 @@ basic_contrasts = dict([(column, contrast_matrix[i])
                   for i, column in enumerate(design_matrix.columns)])
 
 #########################################################################
-# We actually want more interesting contrasts. The simplest contrast
-# just makes the difference between the two main conditions.  We
-# define the two opposite versions to run one-tail t-tests.  We also
-# define the effects of interest contrast, a 2-dimensional contrasts
-# spanning the two conditions.
-
+# We actually want more interesting contrasts
+# The simplest contrast just makes the difference between the two main conditions.
+# We define the two opposite versions to run one-tail t-tests.
+# We also define the effects of interest contrast, a 2-dimensional contrasts spanning the two conditions.
 contrasts = {
     'faces-scrambled': basic_contrasts['faces'] - basic_contrasts['scrambled'],
     'scrambled-faces': -basic_contrasts['faces'] + basic_contrasts['scrambled'],
@@ -126,11 +134,8 @@ for contrast_id, contrast_val in contrasts.items():
         cut_coords=3, black_bg=True, title=contrast_id)
 
 #########################################################################
-# Show the resulting maps: We observe that the analysis results in
-# wide activity for the 'effects of interest' contrast, showing the
-# implications of large portions of the visual cortex in the
-# conditions. By contrast, the differential effect between "faces" and
-# "scambled" involves sparser, more anterior and lateral regions. It
-# displays also some responses in the frontal lobe.
-
+# Show the resulting maps
 plotting.show()
+
+#########################################################################
+# We observe that the analysis results in wide activity for the 'effects of interest' contrast, showing the implications of large portions of the visual cortex in the conditions. By contrast, the differential effect between "faces" and "scambled" involves sparser, more anterior and lateral regions. It displays also some responses in the frontal lobe.
