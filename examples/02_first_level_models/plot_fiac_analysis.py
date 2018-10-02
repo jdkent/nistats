@@ -46,7 +46,7 @@ data = datasets.fetch_fiac_first_level()
 fmri_img = [data['func1'], data['func2']]
 
 #########################################################################
-# Create a mean image for plotting purpose
+# Create a mean image for plotting puepose
 from nilearn.image import mean_img
 mean_img_ = mean_img(fmri_img[0])
 
@@ -60,10 +60,10 @@ design_matrices = [pd.DataFrame(np.load(df)['X']) for df in design_files]
 #########################################################################
 # GLM estimation
 # ----------------------------------
-# GLM specification. Note that the mask was provided in the dataset. So we use it.
+# GLM specification
 
 from nistats.first_level_model import FirstLevelModel
-fmri_glm = FirstLevelModel(mask_img=data['mask'], minimize_memory=True)
+fmri_glm = FirstLevelModel(mask=data['mask'], minimize_memory=True)
 
 #########################################################################
 # GLM fitting
@@ -102,49 +102,20 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     # note that the model implictly compute a fixed effects across the two sessions
     z_map = fmri_glm.compute_contrast(
         contrast_val, output_type='z_score')
-
+    
     # Write the resulting stat images to file 
-    z_image_path = path.join(write_dir, '%s_z_map.nii.gz' % contrast_id)
+    z_image_path = path.join(write_dir, '%s_z_map.nii' % contrast_id)
     z_map.to_filename(z_image_path)
 
 #########################################################################
-# Comparing session-specific and fixed effects.
-# Here, we compare the activation mas produced from each separately then, the fixed effects version
-
-contrast_id = 'Effects_of_interest'
-
-#########################################################################
-# Statistics for the first session
-
-fmri_glm = fmri_glm.fit(fmri_img[0], design_matrices=design_matrices[0])
-z_map = fmri_glm.compute_contrast(
-        contrasts[contrast_id], output_type='z_score')
-plotting.plot_stat_map(
-    z_map, bg_img=mean_img_, threshold=3.0,
-    title='%s, first session' % contrast_id)
+# make a snapshot of the 'Effects_of_interest' contrast map
+zmap = path.join(write_dir, 'Effects_of_interest_z_map.nii')
+display = plotting.plot_stat_map(
+    zmap, bg_img=mean_img_, threshold=2.5, title=contrast_id)
 
 #########################################################################
-# Statistics for the second session
-
-fmri_glm = fmri_glm.fit(fmri_img[1], design_matrices=design_matrices[1])
-z_map = fmri_glm.compute_contrast(
-        contrasts[contrast_id], output_type='z_score')
-plotting.plot_stat_map(
-    z_map, bg_img=mean_img_, threshold=3.0,
-    title='%s, second session' % contrast_id)
-
-#########################################################################
-# Fixed effects statistics
-
-fmri_glm = fmri_glm.fit(fmri_img, design_matrices=design_matrices)
-z_map = fmri_glm.compute_contrast(
-        contrasts[contrast_id], output_type='z_score')
-plotting.plot_stat_map(
-    z_map, bg_img=mean_img_, threshold=3.0,
-    title='%s, fixed effects' % contrast_id)
-
-#########################################################################
-# Not unexpectedly, the fixed effects version looks displays higher peaks than the input sessions. Computing fixed effects enhances the signal-to-noise ratio of the resulting brain maps
+# We can save the figure a posteriori
+display.savefig(path.join(write_dir, '%s_z_map.png' % contrast_id))
 
 plotting.show()
 
