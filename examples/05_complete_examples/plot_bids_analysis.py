@@ -87,7 +87,7 @@ print(models_events[0][0]['trial_type'].value_counts())
 # events dataframe. Sum, substraction and scalar multiplication are allowed.
 
 ############################################################################
-# Set the threshold as the z-variate with an uncorrected p-value of 0.001
+# set the threshold as the z-variate with an uncorrected p-value of 0.001 
 from scipy.stats import norm
 p001_unc = norm.isf(0.001)
 
