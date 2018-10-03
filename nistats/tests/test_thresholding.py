@@ -10,7 +10,7 @@ from numpy.testing import (assert_almost_equal,
                            assert_equal,
                            )
 from scipy.stats import norm
-from nose.tools import assert_true
+from nose.tools import assert_true, assert_raises
 from numpy.testing import assert_almost_equal, assert_equal
 import nibabel as nib
 from nistats.thresholding import fdr_threshold, map_threshold
