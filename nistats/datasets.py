@@ -11,6 +11,7 @@ import re
 
 from botocore.handlers import disable_signing
 import nibabel as nib
+import numpy as np
 import pandas as pd
 from nilearn.datasets.utils import (_fetch_file,
                                     _fetch_files,
@@ -369,33 +370,21 @@ def fetch_localizer_first_level(data_dir=None, verbose=1):
 
 
 def _download_spm_auditory_data(data_dir, subject_dir, subject_id):
-    print('Data absent, downloading...')
-    url = ('http://www.fil.ion.ucl.ac.uk/spm/download/data/MoAEpilot/'
-           'MoAEpilot.zip')
+    print("Data absent, downloading...")
+    url = ("http://www.fil.ion.ucl.ac.uk/spm/download/data/MoAEpilot/"
+           "MoAEpilot.zip")
     archive_path = os.path.join(subject_dir, os.path.basename(url))
     _fetch_file(url, subject_dir)
     try:
         _uncompress_file(archive_path)
     except:
-        print('Archive corrupted, trying to download it again.')
-        return fetch_spm_auditory(data_dir=data_dir, data_name='',
+        print("Archive corrupted, trying to download it again.")
+        return fetch_spm_auditory(data_dir=data_dir, data_name="",
                                   subject_id=subject_id)
 
 
 def _prepare_downloaded_spm_auditory_data(subject_dir):
-    """ Uncompresses downloaded spm_auditory dataset and organizes
-    the data into apprpriate directories.
-
-    Parameters
-    ----------
-    subject_dir: string
-        Path to subject's data directory.
-
-    Returns
-    -------
-    _subject_data: skl.Bunch object
-        Scikit-Learn Bunch object containing data of a single subject
-         from the SPM Auditory dataset.
+    """glob data from subject_dir.
 
     """
     subject_data = {}
@@ -404,71 +393,62 @@ def _prepare_downloaded_spm_auditory_data(subject_dir):
         if os.path.exists(file_path):
             subject_data[file_name] = file_path
         else:
-            print('%s missing from filelist!' % file_name)
+            print("%s missing from filelist!" % file_name)
             return None
 
     _subject_data = {}
-    _subject_data['func'] = sorted(
+    _subject_data["func"] = sorted(
             [subject_data[x] for x in subject_data.keys()
-             if re.match('^fM00223_0\d\d\.img$', os.path.basename(x))])
+             if re.match("^fM00223_0\d\d\.img$", os.path.basename(x))])
 
     # volumes for this dataset of shape (64, 64, 64, 1); let's fix this
-    for x in _subject_data['func']:
+    for x in _subject_data["func"]:
         vol = nib.load(x)
         if len(vol.shape) == 4:
-            vol = nib.Nifti1Image(get_data(vol)[:, :, :, 0],
+            vol = nib.Nifti1Image(vol.get_data()[:, :, :, 0],
                                   vol.affine)
             nib.save(vol, x)
 
-    _subject_data['anat'] = [subject_data[x] for x in subject_data.keys()
-                             if re.match('^sM00223_002\.img$',
+    _subject_data["anat"] = [subject_data[x] for x in subject_data.keys()
+                             if re.match("^sM00223_002\.img$",
                                          os.path.basename(x))][0]
 
     # ... same thing for anat
-    vol = nib.load(_subject_data['anat'])
+    vol = nib.load(_subject_data["anat"])
     if len(vol.shape) == 4:
-        vol = nib.Nifti1Image(get_data(vol)[:, :, :, 0],
+        vol = nib.Nifti1Image(vol.get_data()[:, :, :, 0],
                               vol.affine)
-        nib.save(vol, _subject_data['anat'])
+        nib.save(vol, _subject_data["anat"])
 
     return Bunch(**_subject_data)
+    
 
-
-def _make_path_events_file_spm_auditory_data(spm_auditory_data):
+def _make_spm_auditory_events_file(events_file_location):
     """
-    Accepts data for spm_auditory dataset as Bunch
-    and constructs the filepath for its events descriptor file.
+    Accepts path of a directory and creates the events file necessary
+    for the spm_auditory dataset.
+    The provided path is expected to be the same as the directory contaning spm_auditory fMRI data.
+    The created file's name follows the format <dirname>_events.tsv .
+    
     Parameters
     ----------
-    spm_auditory_data: Bunch
-
-    Returns
-    -------
-    events_filepath: string
-        Full path to the events.tsv file for spm_auditory dataset.
-    """
-    events_file_location = os.path.dirname(spm_auditory_data['func'][0])
-    events_filename = os.path.basename(events_file_location) + '_events.tsv'
-    events_filepath = os.path.join(events_file_location, events_filename)
-    return events_filepath
-
-
-def _make_events_file_spm_auditory_data(events_filepath):
-    """
-    Accepts destination filepath including filename and
-    creates the events.tsv file for the spm_auditory dataset.
-
-    Parameters
-    ----------
-    events_filepath: string
+    events_file_location: string
         The path where the events file will be created;
-
+        expected to be the directory with fMRI data.
+        The name of the last directory in the path
+        is used to generate the name of the events file.
+    
     Returns
     -------
-    None
-
+    events_filepath: string
+        The full path of the created events file.
+    
     """
+    events_filename = os.path.basename(events_file_location) + '_events' + '.tsv'
+    events_filepath = os.path.join(events_file_location, events_filename)
     tr = 7.
+    slice_time_ref = 0.
+    n_scans = 96
     epoch_duration = 6 * tr  # duration in seconds
     conditions = ['rest', 'active'] * 8
     n_blocks = len(conditions)
@@ -476,8 +456,8 @@ def _make_events_file_spm_auditory_data(events_filepath):
     onset = np.linspace(0, (n_blocks - 1) * epoch_duration, n_blocks)
     events = pd.DataFrame(
             {'onset': onset, 'duration': duration, 'trial_type': conditions})
-    events.to_csv(events_filepath, sep='\t', index=False,
-                       columns=['onset', 'duration', 'trial_type'])
+    events.to_csv(events_filepath, sep='\t', index=False, columns=['onset', 'duration', 'trial_type'])
+    return events_filepath
 
 
 def fetch_spm_auditory(data_dir=None, data_name='spm_auditory',
@@ -511,120 +491,12 @@ def fetch_spm_auditory(data_dir=None, data_name='spm_auditory',
         _download_spm_auditory_data(data_dir, subject_dir, subject_id)
     spm_auditory_data = _prepare_downloaded_spm_auditory_data(subject_dir)
     try:
-        spm_auditory_data['events']
+        spm_auditory_data['paradigm']
     except KeyError:
-        events_filepath = _make_path_events_file_spm_auditory_data(
-                                                            spm_auditory_data)
-        if not os.path.isfile(events_filepath):
-            _make_events_file_spm_auditory_data(events_filepath)
-        spm_auditory_data['events'] = events_filepath
+        events_file_location = os.path.dirname(spm_auditory_data['func'][0])
+        events_filepath = _make_spm_auditory_events_file(events_file_location)
+        spm_auditory_data['paradigm'] = events_filepath
     return spm_auditory_data
-
-
-def _get_func_data_spm_multimodal(subject_dir, session, _subject_data):
-    session_func = sorted(glob.glob(
-            os.path.join(
-                    subject_dir,
-                    ('fMRI/Session%i/fMETHODS-000%i-*-01.img' % (
-                        session, session + 4)
-                     )
-                    )
-            ))
-    if len(session_func) < 390:
-        print('Missing %i functional scans for session %i.' % (
-            390 - len(session_func), session))
-        return None
-
-    _subject_data['func%i' % (session)] = session_func
-    return _subject_data
-
-
-def _get_session_trials_spm_multimodal(subject_dir, session, _subject_data):
-    sess_trials = os.path.join(
-            subject_dir,
-            'fMRI/trials_ses%i.mat' % (session))
-    if not os.path.isfile(sess_trials):
-        print('Missing session file: %s' % sess_trials)
-        return None
-
-    _subject_data['trials_ses%i' % (session)] = sess_trials
-    return _subject_data
-
-
-def _get_anatomical_data_spm_multimodal(subject_dir, _subject_data):
-    anat = os.path.join(subject_dir, 'sMRI/smri.img')
-    if not os.path.isfile(anat):
-        print('Missing structural image.')
-        return None
-
-    _subject_data['anat'] = anat
-    return _subject_data
-
-
-def _glob_spm_multimodal_fmri_data(subject_dir):
-    """glob data from subject_dir."""
-    _subject_data = {'slice_order': 'descending'}
-
-    for session in range(1, 3):
-        # glob func data for session
-        _subject_data = _get_func_data_spm_multimodal(subject_dir, session, _subject_data)
-        if not _subject_data:
-            return None
-        # glob trials .mat file
-        _subject_data = _get_session_trials_spm_multimodal(subject_dir, session, _subject_data)
-        if not _subject_data:
-            return None
-        try:
-            events = _make_events_file_spm_multimodal_fmri(_subject_data, session)
-        except MatReadError as mat_err:
-            warnings.warn('{}. An events.tsv file cannot be generated'.format(str(mat_err)))
-        else:
-            events_filepath = _make_events_filepath_spm_multimodal_fmri(_subject_data, session)
-            events.to_csv(events_filepath, sep='\t', index=False)
-            _subject_data['events{}'.format(session)] = events_filepath
-
-
-    # glob for anat data
-    _subject_data = _get_anatomical_data_spm_multimodal(subject_dir, _subject_data)
-    if not _subject_data:
-        return None
-
-    return Bunch(**_subject_data)
-
-
-def _download_data_spm_multimodal(data_dir, subject_dir, subject_id):
-    print('Data absent, downloading...')
-    urls = [
-        # fmri
-        ('http://www.fil.ion.ucl.ac.uk/spm/download/data/mmfaces/'
-        'multimodal_fmri.zip'),
-
-        # structural
-        ('http://www.fil.ion.ucl.ac.uk/spm/download/data/mmfaces/'
-         'multimodal_smri.zip')
-        ]
-
-    for url in urls:
-        archive_path = os.path.join(subject_dir, os.path.basename(url))
-        _fetch_file(url, subject_dir)
-        try:
-            _uncompress_file(archive_path)
-        except:
-            print('Archive corrupted, trying to download it again.')
-            return fetch_spm_multimodal_fmri(data_dir=data_dir,
-                                             data_name='',
-                                             subject_id=subject_id)
-
-    return _glob_spm_multimodal_fmri_data(subject_dir)
-
-
-def _make_events_filepath_spm_multimodal_fmri(_subject_data, session):
-    key = 'trials_ses{}'.format(session)
-    events_file_location = os.path.dirname(_subject_data[key])
-    events_filename = 'session{}_events.tsv'.format(session)
-    events_filepath = os.path.join(events_file_location, events_filename)
-    return events_filepath
-
 
 def _make_events_file_spm_multimodal_fmri(_subject_data, session):
     tr = 2.
