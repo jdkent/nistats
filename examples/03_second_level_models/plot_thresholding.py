@@ -52,15 +52,14 @@ thresholded_map1, threshold1 = map_threshold(
 #########################################################################
 # Now use FDR <.05, (False Discovery Rate) no cluster-level threshold
 thresholded_map2, threshold2 = map_threshold(
-    z_map, alpha=.05, height_control='fdr')
+    z_map, threshold=.05, height_control='fdr')
 print('The FDR=.05 threshold is %.3g' % threshold2)
 
 #########################################################################
-# Now use FWER <.05, (Familywise Error Rate) no cluster-level
-# threshold.  As the data have not been intensively smoothed, we can
-# use a simple Bonferroni correction
+# Now use FWER <.05, (Familywise Error Rate) no cluster-level threshold
+# As the data have not been intensively smoothed, we can use a simple Bonferroni correction
 thresholded_map3, threshold3 = map_threshold(
-    z_map, alpha=.05, height_control='bonferroni')
+    z_map, threshold=.05, height_control='bonferroni')
 print('The p<.05 Bonferroni-corrected threshold is %.3g' % threshold3)
 
 #########################################################################
@@ -90,11 +89,7 @@ plotting.plot_stat_map(thresholded_map3, cut_coords=display.cut_coords,
                        threshold=threshold3)
 
 #########################################################################
-# These different thresholds correspond to different statistical
-# guarantees: in the FWER corrected image there is only a
-# probability<.05 of observing any false positive voxel. In the
-# FDR-corrected image, 5% of the voxels found are likely to be false
-# positive. In the uncorrected image, one expects a few tens of false
-# positive voxels.
+# These different thresholds correpond to different statistical guarnatees:
+# in the FWER corrected image there is only a probability<.05 of observing any false positive voxel. In the FDR-corrected image, 5% of the voxels found are likely to be false positive. In the uncorrected image, one expects a few tens of alse positive voxels. 
 
 plotting.show()
