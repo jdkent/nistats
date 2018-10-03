@@ -22,14 +22,13 @@ except ImportError:
 import numpy as np
 tr = 1.0  # repetition time is 1 second
 n_scans = 128  # the acquisition comprises 128 scans 
-frame_times = np.arange(n_scans) * tr  # here are the correspoding frame times
+frame_times = np.arange(n_scans) * tr  # here are the corespoding frame times
 
 #########################################################################
 # then we define parameters related to the experimental design
 
 # these are the types of the different trials
 conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c3', 'c3', 'c3']
-duration = [1., 1., 1., 1., 1., 1., 1., 1., 1.]
 # these are the corresponding onset times
 onsets = [30., 70., 100., 10., 30., 90., 30., 40., 60.]
 # Next, we simulate 6 motion parameters jointly observed with fMRI acquisitions
@@ -42,17 +41,16 @@ add_reg_names = ['tx', 'ty', 'tz', 'rx', 'ry', 'rz']
 # Create design matrices
 # -------------------------------------
 # The same parameters allow us to obtain a variety of design matrices
-# We first create an events object
+# We first create an event object
 import pandas as pd
-events = pd.DataFrame({'trial_type': conditions, 'onset': onsets,
-                         'duration': duration})
+paradigm = pd.DataFrame({'trial_type': conditions, 'onset': onsets})
 
 #########################################################################
-# We sample the events into a design matrix, also including additional regressors
+# We sample the paradigm into a design matrix, also including additional regressors
 hrf_model = 'glover'
-from nistats.design_matrix import make_first_level_design_matrix
-X1 = make_first_level_design_matrix(
-    frame_times, events, drift_model='polynomial', drift_order=3,
+from nistats.design_matrix import make_design_matrix
+X1 = make_design_matrix(
+    frame_times, paradigm, drift_model='polynomial', drift_order=3,
     add_regs=motion, add_reg_names=add_reg_names, hrf_model=hrf_model)
 
 #########################################################################
@@ -64,8 +62,8 @@ events = pd.DataFrame({'trial_type': conditions, 'onset': onsets,
 
 #########################################################################
 # Then we sample the design matrix
-X2 = make_first_level_design_matrix(frame_times, events, drift_model='polynomial',
-                                    drift_order=3, hrf_model=hrf_model)
+X2 = make_design_matrix(frame_times, paradigm, drift_model='polynomial',
+                        drift_order=3, hrf_model=hrf_model)
 
 #########################################################################
 # Finally we compute a FIR model
