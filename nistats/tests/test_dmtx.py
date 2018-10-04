@@ -49,10 +49,10 @@ def design_matrix_light(
 def basic_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    duration = 1 * np.ones(9)
+    durations = 1 * np.ones(9)
     paradigm = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
-                          'duration': duration})
+                          'duration': durations})
     return paradigm
 
 
@@ -71,11 +71,11 @@ def modulated_block_paradigm():
 def modulated_event_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    duration = 1 * np.ones(9)
+    durations = 1 * np.ones(9)
     values = 1 + np.random.rand(len(onsets))
     events = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
-                          'duration': duration,
+                          'duration': durations,
                           'modulation': values})
     return events
 
@@ -84,10 +84,10 @@ def block_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
     durations = 5 * np.ones(9)
-    events = pd.DataFrame({'trial_type': conditions,
+    paradigm = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
                           'duration': durations})
-    return events
+    return paradigm
 
 
 def test_cosine_drift():
@@ -247,7 +247,7 @@ def test_design_matrix7():
     durations = 1 * np.ones(9)
     # no condition 'c2'
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    events = pd.DataFrame({'trial_type': conditions,
+    paradigm = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
                           'duration':durations})
     hrf_model = 'glover'
@@ -481,10 +481,10 @@ def test_spm_1():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 50, 70, 10, 30, 80, 30, 40, 60]
     durations = 1 * np.ones(9)
-    events = pd.DataFrame({'trial_type': conditions,
+    paradigm = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_first_level_design_matrix(frame_times, events, drift_model=None)
+    X1 = make_design_matrix(frame_times, paradigm, drift_model=None)
     _, matrix, _ = check_design_matrix(X1)
     spm_design_matrix = DESIGN_MATRIX['arr_0']
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /
@@ -498,10 +498,10 @@ def test_spm_2():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 50, 70, 10, 30, 80, 30, 40, 60]
     durations = 10 * np.ones(9)
-    events = pd.DataFrame({'trial_type': conditions,
+    paradigm = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_first_level_design_matrix(frame_times, events, drift_model=None)
+    X1 = make_design_matrix(frame_times, paradigm, drift_model=None)
     spm_design_matrix = DESIGN_MATRIX['arr_1']
     _, matrix, _ = check_design_matrix(X1)
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /
