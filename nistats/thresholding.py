@@ -17,7 +17,7 @@ def fdr_threshold(z_vals, alpha):
     Parameters
     ----------
     z_vals: array,
-            a set of z-variates from which an FDR
+            a set of z-variates from which the FDR is computed
     alpha: float,
            desired FDR control
     
@@ -39,31 +39,31 @@ def fdr_threshold(z_vals, alpha):
         return np.infty
 
 
-def map_threshold(stat_img, mask_img=None, level=.001,
+def map_threshold(stat_img=None, mask_img=None, level=.001,
                   height_control='fpr', cluster_threshold=0):
-    """ Compute the required threhsold level and return the thresholded map
+    """ Compute the required threshold level and return the thresholded map
 
     Parameters
     ----------
     stat_img : Niimg-like object or None, optional
        statistical image (presumably in z scale)
-       whenever height_control is 'fpr' or None,
-       stat_img=None is acceptable.
-       If it is 'fdr' or 'bonferroni', an error is raised if stat_img is None.
+       whenever height_control is 'fpr' or 'none', 
+       stat_img=None os acceptable. 
+       If it is 'fdr' or 'bonferroni', an error is raised       
 
     mask_img : Niimg-like object, optional,
         mask image
 
     level: float, optional
-        number controling the thresholding (either a p-value or z-scale value)
-        Not te be confused with the z-scale threshold: level can be a p-values,
+        number controling the thresholding (either a p-value or z-scale value).
+        Not to be confused with the z-scale threshold: level can be a p-values,
         e.g. "0.05" or another type of number depending on the height_
         control parameter. The z-scale threshold is actually returned by
         the function.
 
     height_control: string, or None optional
         false positive control meaning of cluster forming
-        threshold: 'fpr'|'fdr'|'bonferroni'\|None
+        threshold: 'fpr'|'fdr'|'bonferroni'|None
 
     cluster_threshold : float, optional
         cluster size threshold. In the returned thresholded map,
@@ -91,7 +91,9 @@ def map_threshold(stat_img, mask_img=None, level=.001,
     # if height_control is 'fpr' or None, we don't need to look at the data
     # to compute the threhsold
     if height_control == 'fpr':
-        threshold = norm.isf(alpha)
+        threshold = norm.isf(level)
+    elif height_control is None:
+        threshold = level
 
     # In this case, and is stat_img is None, we return
     if stat_img is None:
@@ -111,14 +113,10 @@ def map_threshold(stat_img, mask_img=None, level=.001,
     n_voxels = np.size(stats)
 
     # Thresholding
-    if height_control == 'fpr':
-        threshold = norm.isf(level)
-    elif height_control == 'fdr':
+    if height_control == 'fdr':
         threshold = fdr_threshold(stats, level)
     elif height_control == 'bonferroni':
         threshold = norm.isf(level / n_voxels)
-    else:  # Brute-force thresholding
-        threshold = level
     stats *= (stats > threshold)
 
     # embed it back to 3D grid
