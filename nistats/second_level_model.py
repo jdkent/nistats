@@ -20,9 +20,7 @@ from nilearn._utils.niimg_conversions import check_niimg
 from nilearn._utils import CacheMixin
 from nilearn.input_data import NiftiMasker
 from nilearn.image import mean_img
-from nilearn.mass_univariate import permuted_ols
-from sklearn.base import BaseEstimator, TransformerMixin, clone
-from sklearn.externals.joblib import Memory
+from patsy import DesignInfo
 
 from .first_level_model import FirstLevelModel
 from .first_level_model import run_glm
@@ -332,9 +330,70 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             Ensure that the order of maps given by a second_level_input
             list of Niimgs matches the order of the rows in the design matrix.
         """
-        # check second_level_input
-        _check_second_level_input(second_level_input, design_matrix,
-                                  confounds=confounds)
+        # Check parameters
+        # check first level input
+        if isinstance(second_level_input, list):
+            if len(second_level_input) < 2:
+                raise ValueError('A second level model requires a list with at'
+                                 'least two first level models or niimgs')
+            # Check FirstLevelModel objects case
+            if isinstance(second_level_input[0], FirstLevelModel):
+                models_input = enumerate(second_level_input)
+                for model_idx, first_level_model in models_input:
+                    if (first_level_model.labels_ is None or
+                            first_level_model.results_ is None):
+                        raise ValueError(
+                            'Model %s at index %i has not been fit yet'
+                            '' % (first_level_model.subject_label, model_idx))
+                    if not isinstance(first_level_model, FirstLevelModel):
+                        raise ValueError(' object at idx %d is %s instead of'
+                                         ' FirstLevelModel object' %
+                                         (model_idx, type(first_level_model)))
+                    if confounds is not None:
+                        if first_level_model.subject_label is None:
+                            raise ValueError(
+                                'In case confounds are provided, first level '
+                                'objects need to provide the attribute '
+                                'subject_label to match rows appropriately.'
+                                'Model at idx %d does not provide it. '
+                                'To set it, you can do '
+                                'first_level_model.subject_label = "01"'
+                                '' % (model_idx))
+            # Check niimgs case
+            elif isinstance(second_level_input[0], (str, Nifti1Image)):
+                if design_matrix is None:
+                    raise ValueError('List of niimgs as second_level_input'
+                                     ' require a design matrix to be provided')
+                for model_idx, niimg in enumerate(second_level_input):
+                    if not isinstance(niimg, (str, Nifti1Image)):
+                        raise ValueError(' object at idx %d is %s instead of'
+                                         ' Niimg-like object' %
+                                         (model_idx, type(niimg)))
+        # Check pandas dataframe case
+        elif isinstance(second_level_input, pd.DataFrame):
+            for col in ['subject_label', 'map_name', 'effects_map_path']:
+                if col not in second_level_input.columns:
+                    raise ValueError('second_level_input DataFrame must have'
+                                     ' columns subject_label, map_name and'
+                                     ' effects_map_path')
+            # Make sure subject_label contain strings
+            second_level_columns = second_level_input.columns.tolist()
+            labels_index = second_level_columns.index('subject_label')
+            labels_dtype = second_level_input.dtypes[labels_index]
+            if not isinstance(labels_dtype, np.object):
+                raise ValueError('subject_label column must be of dtype '
+                                 'object instead of dtype %s' % labels_dtype)
+        elif isinstance(second_level_input, (str, Nifti1Image)):
+            if design_matrix is None:
+                raise ValueError('List of niimgs as second_level_input'
+                                 ' require a design matrix to be provided')
+            second_level_input = check_niimg(niimg=second_level_input,
+                                             ensure_ndim=4) 
+        else:
+            raise ValueError('second_level_input must be a list of'
+                             ' `FirstLevelModel` objects, a pandas DataFrame'
+                             ' or a list Niimg-like objects. Instead %s '
+                             'was provided' % type(second_level_input))
 
         # check confounds
         _check_confounds(confounds)

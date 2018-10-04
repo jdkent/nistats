@@ -13,23 +13,8 @@ from nibabel import (load,
                      Nifti1Image,
                      )
 from nibabel.tmpdirs import InTemporaryDirectory
+import pandas as pd
 from nilearn.image import concat_imgs
-from nose.tools import (assert_true,
-                        assert_equal,
-                        assert_raises,
-                        )
-from numpy.testing import (assert_almost_equal,
-                           assert_array_equal,
-                           )
-
-from nistats.first_level_model import (FirstLevelModel,
-                                       run_glm,
-                                       )
-from nistats.second_level_model import (SecondLevelModel,
-                                        non_parametric_inference,
-                                        )
-from nistats._utils.testing import _write_fake_fmri_data
-from nistats.utils import get_data
 
 # This directory path
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
