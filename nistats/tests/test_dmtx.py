@@ -49,11 +49,11 @@ def design_matrix_light(
 def basic_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    durations = 1 * np.ones(9)
-    events = pd.DataFrame({'trial_type': conditions,
+    duration = 1 * np.ones(9)
+    paradigm = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
-                          'duration': durations})
-    return events
+                          'duration': duration})
+    return paradigm
 
 
 def modulated_block_paradigm():
@@ -71,11 +71,11 @@ def modulated_block_paradigm():
 def modulated_event_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    durations = 1 * np.ones(9)
+    duration = 1 * np.ones(9)
     values = 1 + np.random.rand(len(onsets))
     events = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
-                          'duration': durations,
+                          'duration': duration,
                           'modulation': values})
     return events
 
