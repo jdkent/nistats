@@ -58,31 +58,15 @@ from scipy.io import loadmat
 import pandas as pd
 from nistats.design_matrix import make_design_matrix
 design_matrices = []
-
-#########################################################################
-# loop over the two sessions
-for idx in range(len(fmri_img)):
-    # The following manipulations are meant to build a valid events descriptor
-    # define the onset times of the events
-    n_scans = fmri_img[idx].shape[-1]
-    timing = loadmat(getattr(subject_data, "trials_ses%i" % (idx + 1)),
-                     squeeze_me=True, struct_as_record=False)
-    faces_onsets = timing['onsets'][0].ravel()
-    scrambled_onsets = timing['onsets'][1].ravel()
-    onsets = np.hstack((faces_onsets, scrambled_onsets))
-    onsets *= tr  # because onsets were reporting in 'scans' units
-
-    # define the events trial type
-    conditions = (['faces'] * len(faces_onsets) +
-                  ['scrambled'] * len(scrambled_onsets))
-    # make a paradigm out of it
-    paradigm = pd.DataFrame({'trial_type': conditions, 'onset': onsets})
-    
-    # Define the sampling times for the design matrix
+for idx, img in enumerate(fmri_img, start=1):
+    # Build paradigm
+    n_scans = img.shape[-1]
+    events = pd.read_table(subject_data['events{}'.format(idx)])
+    # Build design matrix
     frame_times = np.arange(n_scans) * tr
     # Build design matrix with the reviously defined parameters
     design_matrix = make_design_matrix(
-        frame_times, paradigm, hrf_model=hrf_model, drift_model=drift_model,
+        frame_times, events, hrf_model=hrf_model, drift_model=drift_model,
         period_cut=period_cut)
 
     # put the design matrices in a list 
