@@ -43,7 +43,7 @@ def _read_events_table(table):
     ----------
     table: string
         Accepts the path to an events file
-
+    
     Returns
     -------
     loaded: pandas.Dataframe object
@@ -56,7 +56,7 @@ def _read_events_table(table):
         raise ValueError('table path %s could not be loaded' % table)
     if loaded.empty:
         try:
-            loaded = pd.read_csv(table, sep='\t')
+            loaded = pd.read_table(table)
         except:
             raise ValueError('table path %s could not be loaded' % table)
     return loaded
