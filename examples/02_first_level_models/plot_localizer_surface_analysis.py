@@ -37,6 +37,8 @@ slice_time_ref = 0.5
 # First the fMRI data
 from nistats.datasets import fetch_localizer_first_level
 data = fetch_localizer_first_level()
+paradigm_file = data.paradigm
+paradigm = pd.read_table(paradigm_file)
 fmri_img = data.epi_img
 
 #########################################################################
