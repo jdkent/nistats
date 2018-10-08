@@ -35,13 +35,13 @@ DESIGN_MATRIX = np.load(full_path_design_matrix_file)
 
 def design_matrix_light(
     frame_times, events=None, hrf_model='glover',
-    drift_model='cosine', high_pass=.01, drift_order=1, fir_delays=[0],
+    drift_model='cosine', period_cut=128, drift_order=1, fir_delays=[0],
     add_regs=None, add_reg_names=None, min_onset=-24, path=None):
     """ Idem make_first_level_design_matrix, but only returns the computed matrix
     and associated names """
-    dmtx = make_first_level_design_matrix(frame_times, events, hrf_model,
-                                          drift_model, high_pass, drift_order, fir_delays,
-                                          add_regs, add_reg_names, min_onset)
+    dmtx = make_design_matrix(frame_times, events, hrf_model,
+    drift_model, period_cut, drift_order, fir_delays,
+    add_regs, add_reg_names, min_onset)
     _, matrix, names = check_design_matrix(dmtx)
     return matrix, names
 
@@ -50,10 +50,10 @@ def basic_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
     durations = 1 * np.ones(9)
-    paradigm = pd.DataFrame({'trial_type': conditions,
+    events = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
                           'duration': durations})
-    return paradigm
+    return events
 
 
 def modulated_block_paradigm():
@@ -84,10 +84,10 @@ def block_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
     durations = 5 * np.ones(9)
-    paradigm = pd.DataFrame({'trial_type': conditions,
+    events = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
                           'duration': durations})
-    return paradigm
+    return events
 
 
 def test_cosine_drift():
@@ -162,7 +162,7 @@ def test_convolve_regressors():
     conditions = ['c0', 'c1']
     onsets = [20, 40]
     duration = [1, 1]
-    paradigm = pd.DataFrame(
+    events = pd.DataFrame(
         {'trial_type': conditions, 'onset': onsets, 'duration': duration})
     # names not passed -> default names
     frame_times = np.arange(100)
@@ -191,8 +191,8 @@ def test_design_matrix2():
     events = basic_paradigm()
     hrf_model = 'glover'
     X, names = design_matrix_light(frame_times, events, hrf_model=hrf_model,
-                                   drift_model='cosine', high_pass=1./63)
-    assert_equal(len(names), 8)
+                        drift_model='cosine', period_cut=63)
+    assert_equal(len(names), 7)  # was 8 with old cosine
 
 
 def test_design_matrix3():
@@ -247,7 +247,7 @@ def test_design_matrix7():
     durations = 1 * np.ones(9)
     # no condition 'c2'
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
-    paradigm = pd.DataFrame({'trial_type': conditions,
+    events = pd.DataFrame({'trial_type': conditions,
                           'onset': onsets,
                           'duration':durations})
     hrf_model = 'glover'
@@ -277,6 +277,19 @@ def test_design_matrix9():
                             drift_model='polynomial', drift_order=3,
                             fir_delays=range(1, 5))
     assert_equal(len(names), 16)
+
+
+def test_design_matrix10():
+    # Check that the first column o FIR design matrix is OK
+    tr = 1.0
+    frame_times = np.linspace(0, 127 * tr, 128)
+    events = basic_paradigm()
+    hrf_model = 'FIR'
+    X, names = design_matrix_light(frame_times, events, hrf_model=hrf_model,
+                         drift_model='polynomial', drift_order=3,
+                         fir_delays=range(1, 5))
+    onset = events.onset[events.trial_type == 'c0'].astype(np.int)
+    assert_true(np.all((X[onset + 1, 0] == 1)))
 
 
 def test_design_matrix11():
@@ -329,7 +342,7 @@ def test_design_matrix14():
                          drift_model='polynomial', drift_order=3,
                          fir_delays=range(1, 5))
     onset = events.onset[events.trial_type == 'c0'].astype(np.int)
-    assert_true(np.all(X[onset + 1, 0] > .5))
+    assert_true(np.all(X[onset + 1, 0] > .9))
 
 
 def test_design_matrix15():
@@ -433,14 +446,14 @@ def test_fir_block():
     assert_true((X[idx + 3, 7] == 1).all())
 
 def test_oversampling():
-    paradigm = basic_paradigm()
+    events = basic_paradigm()
     frame_times = np.linspace(0, 127, 128)
     X1 = make_design_matrix(
-        frame_times, paradigm, drift_model=None)
+        frame_times, events, drift_model=None)
     X2 = make_design_matrix(
-        frame_times, paradigm, drift_model=None, oversampling=50)
+        frame_times, events, drift_model=None, oversampling=50)
     X3 = make_design_matrix(
-        frame_times, paradigm, drift_model=None, oversampling=10)
+        frame_times, events, drift_model=None, oversampling=10)
 
     # oversampling = 16 is the default so X2 = X1, X3 \neq X1, X3 close to X2
     assert_almost_equal(X1.values, X2.values)
@@ -449,10 +462,10 @@ def test_oversampling():
 
     # fir model, oversampling is forced to 1
     X4 = make_design_matrix(
-        frame_times, paradigm, hrf_model='fir', drift_model=None,
+        frame_times, events, hrf_model='fir', drift_model=None,
         fir_delays=range(0, 4), oversampling=1)
     X5 = make_design_matrix(
-        frame_times, paradigm, hrf_model='fir', drift_model=None,
+        frame_times, events, hrf_model='fir', drift_model=None,
         fir_delays=range(0, 4), oversampling=3)
     assert_almost_equal(X4.values, X5.values)
 
@@ -461,8 +474,8 @@ def test_csv_io():
     tr = 1.0
     frame_times = np.linspace(0, 127 * tr, 128)
     events = modulated_event_paradigm()
-    DM = make_first_level_design_matrix(frame_times, events, hrf_model='glover',
-                                        drift_model='polynomial', drift_order=3)
+    DM = make_design_matrix(frame_times, events, hrf_model='glover',
+                            drift_model='polynomial', drift_order=3)
     path = 'design_matrix.csv'
     with InTemporaryDirectory():
         DM.to_csv(path)
@@ -481,10 +494,10 @@ def test_spm_1():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 50, 70, 10, 30, 80, 30, 40, 60]
     durations = 1 * np.ones(9)
-    paradigm = pd.DataFrame({'trial_type': conditions,
+    events = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_design_matrix(frame_times, paradigm, drift_model=None)
+    X1 = make_design_matrix(frame_times, events, drift_model=None)
     _, matrix, _ = check_design_matrix(X1)
     spm_design_matrix = DESIGN_MATRIX['arr_0']
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /
@@ -498,10 +511,10 @@ def test_spm_2():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 50, 70, 10, 30, 80, 30, 40, 60]
     durations = 10 * np.ones(9)
-    paradigm = pd.DataFrame({'trial_type': conditions,
+    events = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_design_matrix(frame_times, paradigm, drift_model=None)
+    X1 = make_design_matrix(frame_times, events, drift_model=None)
     spm_design_matrix = DESIGN_MATRIX['arr_1']
     _, matrix, _ = check_design_matrix(X1)
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /

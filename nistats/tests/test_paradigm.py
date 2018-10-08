@@ -14,10 +14,10 @@ def basic_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
     durations = 1 * np.ones(9)
-    paradigm = pd.DataFrame({'name': conditions, 
+    events = pd.DataFrame({'name': conditions,
                             'onset': onsets,
                             'duration': durations})
-    return paradigm
+    return events
 
 
 def modulated_block_paradigm():
@@ -48,10 +48,10 @@ def block_paradigm():
     conditions = ['c0', 'c0', 'c0', 'c1', 'c1', 'c1', 'c2', 'c2', 'c2']
     onsets = [30, 70, 100, 10, 30, 90, 30, 40, 60]
     durations = 5 * np.ones(9)
-    paradigm = pd.DataFrame({'name': conditions,
+    events = pd.DataFrame({'name': conditions,
                           'onset': onsets,
                           'duration': durations})
-    return paradigm
+    return events
 
 
 def write_events(events, tmpdir):
@@ -71,6 +71,6 @@ def test_read_events():
                      modulated_event_paradigm(),
                      modulated_block_paradigm(),
                      basic_paradigm()):
-        csvfile = write_paradigm(paradigm, tmpdir)
-        read_paradigm = pd.read_csv(csvfile)
-        assert_true((read_paradigm['onset'] == paradigm['onset']).all())
+        csvfile = write_events(events, tmpdir)
+        read_paradigm = pd.read_table(csvfile)
+        assert_true((read_paradigm['onset'] == events['onset']).all())
