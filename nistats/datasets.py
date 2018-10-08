@@ -10,7 +10,6 @@ import os
 import re
 import warnings
 
-from botocore.handlers import disable_signing
 import nibabel as nib
 import numpy as np
 import pandas as pd
@@ -135,9 +134,10 @@ def fetch_openneuro_dataset_index(data_dir=None,
     urls: list of string
         Sorted list of dataset directories
     """
-    data_prefix = '{}/{}/uncompressed'.format(dataset_version.split('_')[0],
-                                              dataset_version,
-                                              )
+    from botocore.handlers import disable_signing
+    boto3 = _check_import_boto3("boto3")
+    data_prefix = '{}/{}/uncompressed'.format(
+        dataset_version.split('_')[0], dataset_version)
     data_dir = _get_dataset_dir(data_prefix, data_dir=data_dir,
                                 verbose=verbose)
 
