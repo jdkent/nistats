@@ -49,10 +49,9 @@ fmri_img = data.epi_img
 
 #########################################################################
 # Second the experimental paradigm.
-paradigm_file = data.paradigm
+events_file = data['events']
 import pandas as pd
-paradigm = pd.read_csv(paradigm_file, sep=' ', header=None, index_col=None)
-paradigm.columns = ['session', 'trial_type', 'onset']
+events = pd.read_table(events_file)
 
 #########################################################################
 # Project the fMRI image to the surface
@@ -89,8 +88,10 @@ frame_times = t_r * (np.arange(n_scans) + .5)
 # We specify an hrf model containing Glover model and its time derivative
 # the drift model is implicitly a cosine basis with period cutoff 128s.
 from nistats.design_matrix import make_design_matrix
-design_matrix = make_design_matrix(
-    frame_times, paradigm=paradigm, hrf_model='glover + derivative')
+design_matrix = make_design_matrix(frame_times,
+                                   paradigm=events,
+                                   hrf_model='glover + derivative'
+                                   )
 
 #########################################################################
 # Setup and fit GLM.
@@ -117,18 +118,22 @@ basic_contrasts = dict([(column, contrast_matrix[i])
 
 #########################################################################
 # add some intermediate contrasts
-basic_contrasts["audio"] = basic_contrasts["clicDaudio"] +\
-                           basic_contrasts["clicGaudio"] +\
-                           basic_contrasts["calculaudio"] +\
-                           basic_contrasts["phraseaudio"]
-basic_contrasts["video"] = basic_contrasts["clicDvideo"] +\
-                           basic_contrasts["clicGvideo"] + \
-                           basic_contrasts["calculvideo"] +\
-                           basic_contrasts["phrasevideo"]
-basic_contrasts["computation"] = basic_contrasts["calculaudio"] +\
-                                 basic_contrasts["calculvideo"]
-basic_contrasts["sentences"] = basic_contrasts["phraseaudio"] +\
-                               basic_contrasts["phrasevideo"]
+basic_contrasts["audio"] = (basic_contrasts["clicDaudio"]
+                            + basic_contrasts["clicGaudio"]
+                            + basic_contrasts["calculaudio"]
+                            + basic_contrasts["phraseaudio"]
+                            )
+basic_contrasts["video"] = (basic_contrasts["clicDvideo"]
+                            + basic_contrasts["clicGvideo"]
+                            + basic_contrasts["calculvideo"]
+                            + basic_contrasts["phrasevideo"]
+                            )
+basic_contrasts["computation"] = (basic_contrasts["calculaudio"]
+                                  + basic_contrasts["calculvideo"]
+                                  )
+basic_contrasts["sentences"] = (basic_contrasts["phraseaudio"]
+                                + basic_contrasts["phrasevideo"]
+                                )
 
 #########################################################################
 # Finally make a dictionary of more relevant contrasts
@@ -140,13 +145,15 @@ basic_contrasts["sentences"] = basic_contrasts["phraseaudio"] +\
 # Of course, we could define other contrasts, but we keep only 3 for simplicity.
 
 contrasts = {
-    "left - right button press": (basic_contrasts["clicGaudio"] +
-                                  basic_contrasts["clicGvideo"] -
-                                  basic_contrasts["clicDaudio"] -
-                                  basic_contrasts["clicDvideo"]),
+    "left - right button press": (basic_contrasts["clicGaudio"]
+                                  + basic_contrasts["clicGvideo"]
+                                  - basic_contrasts["clicDaudio"]
+                                  - basic_contrasts["clicDvideo"]
+                                  ),
     "audio - video": basic_contrasts["audio"] - basic_contrasts["video"],
     "computation - sentences": (basic_contrasts["computation"] -
-                                basic_contrasts["sentences"])
+                                basic_contrasts["sentences"]
+                                )
     }
 
 #########################################################################
