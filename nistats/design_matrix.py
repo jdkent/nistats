@@ -44,6 +44,7 @@ from scipy import linalg
 
 from .experimental_paradigm import check_events
 from .hemodynamic_models import compute_regressor, _orthogonalize
+from .experimental_paradigm import check_events
 from .utils import full_rank, _basestring
 
 ######################################################################
@@ -169,7 +170,7 @@ def _make_drift(drift_model, frame_times, order, high_pass):
     return drift, names
 
 
-def _convolve_regressors(paradigm, hrf_model, frame_times, fir_delays=[0],
+def _convolve_regressors(events, hrf_model, frame_times, fir_delays=[0],
                          min_onset=-24, oversampling=50):
     """ Creation of  a matrix that comprises
     the convolution of the conditions onset with a certain hrf model
@@ -227,7 +228,7 @@ def _convolve_regressors(paradigm, hrf_model, frame_times, fir_delays=[0],
     elif oversampling is None:
         oversampling = 50
 
-    trial_type, onset, duration, modulation = check_paradigm(paradigm)
+    trial_type, onset, duration, modulation = check_events(events)
     for condition in np.unique(trial_type):
         condition_mask = (trial_type == condition)
         exp_condition = (onset[condition_mask],
@@ -252,7 +253,7 @@ def _convolve_regressors(paradigm, hrf_model, frame_times, fir_delays=[0],
 
 
 def make_design_matrix(
-    frame_times, paradigm=None, hrf_model='glover',
+    frame_times, events=None, hrf_model='glover',
     drift_model='cosine', period_cut=128, drift_order=1, fir_delays=[0],
         add_regs=None, add_reg_names=None, min_onset=-24, oversampling=50):
     """Generate a design matrix from the input parameters
@@ -264,7 +265,7 @@ def make_design_matrix(
 
     events : DataFrame instance, optional
         Events data that describes the experimental paradigm.
-         The DataFrame instance might have these keys:
+        The DataFrame instance might have these keys:
             'onset': column to specify the start time of each events in
                      seconds. An error is raised if this key is missing.
             'trial_type': column to specify per-event experimental conditions
@@ -276,10 +277,8 @@ def make_design_matrix(
             'modulation': column to specify the amplitude of each
                           events. If missing the default is set to
                           ones(n_events).
-        
-        An experimental paradigm is valid if it has an 'onset' key
-        and a 'duration' key.
-        If these keys are missing an error will be raised.
+        An experimental paradigm is valid if it has an 'onset' key.
+        If this key is missing an error will be raised.
         For the others keys a warning will be displayed.
         Particular attention should be given to the 'trial_type' key
         which defines the different conditions in the experimental paradigm.
@@ -356,7 +355,7 @@ def make_design_matrix(
         if isinstance(hrf_model, _basestring):
             hrf_model = hrf_model.lower()
         matrix, names = _convolve_regressors(
-            paradigm, hrf_model, frame_times, fir_delays, min_onset,
+            events, hrf_model, frame_times, fir_delays, min_onset,
             oversampling)
 
     # step 2: additional regressors

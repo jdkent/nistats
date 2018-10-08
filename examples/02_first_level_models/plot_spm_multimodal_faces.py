@@ -58,7 +58,7 @@ import pandas as pd
 from nistats.design_matrix import make_design_matrix
 design_matrices = []
 for idx, img in enumerate(fmri_img, start=1):
-    # Build paradigm
+    # Build experimental paradigm
     n_scans = img.shape[-1]
     events = pd.read_table(subject_data['events{}'.format(idx)])
     # Build design matrix
