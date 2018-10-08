@@ -234,7 +234,7 @@ def test_first_level_model_design_creation():
         FUNCFILE = FUNCFILE[0]
         func_img = load(FUNCFILE)
         # basic test based on basic_paradigm and glover hrf
-        t_r = 1.0
+        t_r = 10.0
         slice_time_ref = 0.
         events = basic_paradigm()
         model = FirstLevelModel(t_r, slice_time_ref, mask=mask,
@@ -261,7 +261,7 @@ def test_first_level_model_glm_computation():
         FUNCFILE = FUNCFILE[0]
         func_img = load(FUNCFILE)
         # basic test based on basic_paradigm and glover hrf
-        t_r = 1.0
+        t_r = 10.0
         slice_time_ref = 0.
         events = basic_paradigm()
         # ols case
@@ -286,7 +286,7 @@ def test_first_level_model_contrast_computation():
         FUNCFILE = FUNCFILE[0]
         func_img = load(FUNCFILE)
         # basic test based on basic_paradigm and glover hrf
-        t_r = 1.0
+        t_r = 10.0
         slice_time_ref = 0.
         events = basic_paradigm()
         # ols case
