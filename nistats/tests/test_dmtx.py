@@ -15,12 +15,10 @@ import pandas as pd
 from nibabel.tmpdirs import InTemporaryDirectory
 from nilearn._utils.testing import assert_raises_regex
 
-from nistats.design_matrix import (_convolve_regressors,
-                                   _cosine_drift,
-                                   check_design_matrix,
-                                   make_first_level_design_matrix,
-                                   make_second_level_design_matrix,
-                                   )
+from nistats.design_matrix import (
+    _convolve_regressors, make_first_level_design_matrix,
+    _cosine_drift, check_design_matrix,
+    make_second_level_design_matrix)
 
 
 from nose.tools import assert_true, assert_equal, assert_raises
@@ -39,9 +37,9 @@ def design_matrix_light(
     add_regs=None, add_reg_names=None, min_onset=-24, path=None):
     """ Idem make_first_level_design_matrix, but only returns the computed matrix
     and associated names """
-    dmtx = make_design_matrix(frame_times, events, hrf_model,
-    drift_model, period_cut, drift_order, fir_delays,
-    add_regs, add_reg_names, min_onset)
+    dmtx = make_first_level_design_matrix(frame_times, events, hrf_model,
+                                          drift_model, period_cut, drift_order, fir_delays,
+                                          add_regs, add_reg_names, min_onset)
     _, matrix, names = check_design_matrix(dmtx)
     return matrix, names
 
@@ -448,11 +446,11 @@ def test_fir_block():
 def test_oversampling():
     events = basic_paradigm()
     frame_times = np.linspace(0, 127, 128)
-    X1 = make_design_matrix(
+    X1 = make_first_level_design_matrix(
         frame_times, events, drift_model=None)
-    X2 = make_design_matrix(
+    X2 = make_first_level_design_matrix(
         frame_times, events, drift_model=None, oversampling=50)
-    X3 = make_design_matrix(
+    X3 = make_first_level_design_matrix(
         frame_times, events, drift_model=None, oversampling=10)
 
     # oversampling = 16 is the default so X2 = X1, X3 \neq X1, X3 close to X2
@@ -461,10 +459,10 @@ def test_oversampling():
     assert_true(np.linalg.norm(X2.values - X3.values) / np.linalg.norm(X2.values) > 1.e-4)
 
     # fir model, oversampling is forced to 1
-    X4 = make_design_matrix(
+    X4 = make_first_level_design_matrix(
         frame_times, events, hrf_model='fir', drift_model=None,
         fir_delays=range(0, 4), oversampling=1)
-    X5 = make_design_matrix(
+    X5 = make_first_level_design_matrix(
         frame_times, events, hrf_model='fir', drift_model=None,
         fir_delays=range(0, 4), oversampling=3)
     assert_almost_equal(X4.values, X5.values)
@@ -474,8 +472,8 @@ def test_csv_io():
     tr = 1.0
     frame_times = np.linspace(0, 127 * tr, 128)
     events = modulated_event_paradigm()
-    DM = make_design_matrix(frame_times, events, hrf_model='glover',
-                            drift_model='polynomial', drift_order=3)
+    DM = make_first_level_design_matrix(frame_times, events, hrf_model='glover',
+                                        drift_model='polynomial', drift_order=3)
     path = 'design_matrix.csv'
     with InTemporaryDirectory():
         DM.to_csv(path)
@@ -497,7 +495,7 @@ def test_spm_1():
     events = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_design_matrix(frame_times, events, drift_model=None)
+    X1 = make_first_level_design_matrix(frame_times, events, drift_model=None)
     _, matrix, _ = check_design_matrix(X1)
     spm_design_matrix = DESIGN_MATRIX['arr_0']
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /
@@ -514,7 +512,7 @@ def test_spm_2():
     events = pd.DataFrame({'trial_type': conditions,
                              'onset': onsets,
                              'duration': durations})
-    X1 = make_design_matrix(frame_times, events, drift_model=None)
+    X1 = make_first_level_design_matrix(frame_times, events, drift_model=None)
     spm_design_matrix = DESIGN_MATRIX['arr_1']
     _, matrix, _ = check_design_matrix(X1)
     assert_true(((spm_design_matrix - matrix) ** 2).sum() /

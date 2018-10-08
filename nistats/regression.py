@@ -21,8 +21,8 @@ __docformat__ = 'restructuredtext en'
 import numpy as np
 
 from nibabel.onetime import setattr_on_read
-from numpy.linalg import matrix_rank
-import scipy.linalg as spl
+
+from .utils import positive_reciprocal
 
 from .model import LikelihoodModelResults
 from .utils import positive_reciprocal
@@ -278,14 +278,14 @@ class RegressionResults(LikelihoodModelResults):
         self.wresid = wresid
         self.wdesign = model.wdesign
 
-    @property
+    @setattr_on_read
     def resid(self):
         """
         Residuals from the fit.
         """
         return self.Y - self.predicted
 
-    @property
+    @setattr_on_read
     def norm_resid(self):
         """
         Residuals, normalized to have unit length.
@@ -305,7 +305,7 @@ class RegressionResults(LikelihoodModelResults):
         """
         return self.resid * positive_reciprocal(np.sqrt(self.dispersion))
 
-    @property
+    @setattr_on_read
     def predicted(self):
         """ Return linear predictor values from a design matrix.
         """
@@ -314,20 +314,20 @@ class RegressionResults(LikelihoodModelResults):
         X = self.wdesign
         return np.dot(X, beta)
 
-    @property
+    @psetattr_on_readroperty
     def SSE(self):
         """Error sum of squares. If not from an OLS model this is "pseudo"-SSE.
         """
         return (self.wresid ** 2).sum(0)
 
-    @property
+    @psetattr_on_readroperty
     def rsq(self):
         """Proportion of explained variance. 
         If not from an OLS model this is "pseudo"-R2.
         """
         return np.var(self.predicted, 0) / np.var(self.wY, 0)
 
-    @property
+    @psetattr_on_readroperty
     def MSE(self):
         """ Mean square (error) """
         return self.SSE / self.df_resid
@@ -361,20 +361,15 @@ class SimpleRegressionResults(RegressionResults):
         """
         The maximized log-likelihood
         """
-        raise ValueError("SimpleRegressionResults does not store residuals."
-                         "And can therefore not calculate logL."
-                        "If needed, use the RegressionResults class.")
+        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
 
-    @property
+    @setattr_on_read
     def resid(self):
         """
         Residuals from the fit.
         """
-        raise ValueError("SimpleRegressionResults does not store residuals."
-                        "If needed, use the RegressionResults class.")
+        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
 
-    @property
+    @setattr_on_read
     def norm_resid(self):
-        raise ValueError("SimpleRegressionResults does not store residuals."  
-                        "If needed, use the RegressionResults class.")
-
+        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')

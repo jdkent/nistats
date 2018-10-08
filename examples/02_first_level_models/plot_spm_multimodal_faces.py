@@ -55,7 +55,7 @@ mean_image = mean_img(fmri_img)
 # Make design matrices
 import numpy as np
 import pandas as pd
-from nistats.design_matrix import make_design_matrix
+from nistats.design_matrix import make_first_level_design_matrix
 design_matrices = []
 for idx, img in enumerate(fmri_img, start=1):
     # Build experimental paradigm
@@ -64,11 +64,15 @@ for idx, img in enumerate(fmri_img, start=1):
     # Build design matrix
     frame_times = np.arange(n_scans) * tr
     # Build design matrix with the reviously defined parameters
-    design_matrix = make_design_matrix(
-        frame_times, events, hrf_model=hrf_model, drift_model=drift_model,
-        period_cut=period_cut)
+    design_matrix = make_first_level_design_matrix(
+            frame_times,
+            events,
+            hrf_model=hrf_model,
+            drift_model=drift_model,
+            period_cut=period_cut,
+            )
 
-    # put the design matrices in a list 
+    # put the design matrices in a list
     design_matrices.append(design_matrix)
 
 #########################################################################

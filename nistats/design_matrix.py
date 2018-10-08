@@ -252,7 +252,7 @@ def _convolve_regressors(events, hrf_model, frame_times, fir_delays=[0],
 ######################################################################
 
 
-def make_design_matrix(
+def make_first_level_design_matrix(
     frame_times, events=None, hrf_model='glover',
     drift_model='cosine', period_cut=128, drift_order=1, fir_delays=[0],
         add_regs=None, add_reg_names=None, min_onset=-24, oversampling=50):

@@ -24,21 +24,12 @@ from numpy.testing import (assert_almost_equal,
                            )
 from scipy.stats import norm
 
-from nistats._utils.datasets import make_fresh_openneuro_dataset_urls_index
-from nistats._utils.testing import _create_fake_bids_dataset
-from nistats.tests.test_datasets import setup_mock, teardown_mock
-from nistats.utils import (_check_run_tables,
-                           _check_and_load_tables,
-                           _check_list_length_match,
-                           full_rank,
-                           get_bids_files,
-                           get_design_from_fslmat,
-                           multiple_fast_inverse,
-                           multiple_mahalanobis,
-                           parse_bids_filename,
-                           positive_reciprocal,
-                           z_score,
-                           )
+from nistats.utils import (multiple_mahalanobis, z_score, multiple_fast_inverse,
+                           positive_reciprocal, full_rank, _check_run_tables,
+                           _check_and_load_tables, _check_list_length_match,
+                           get_bids_files, parse_bids_filename,
+                           get_design_from_fslmat)
+from nilearn.datasets.tests import test_utils as tst
 
 
 def test_full_rank():
