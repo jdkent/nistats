@@ -40,6 +40,10 @@ data_dir, _ = fetch_language_localizer_demo_dataset()
 print(data_dir)
 
 ##############################################################################
+# Here is the location of the dataset on disk
+print(data_dir)
+
+##############################################################################
 # Obtain automatically FirstLevelModel objects and fit arguments
 # --------------------------------------------------------------
 # From the dataset directory we obtain automatically FirstLevelModel objects
