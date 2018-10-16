@@ -15,7 +15,8 @@ from warnings import warn
 import pandas as pd
 import numpy as np
 
-from nibabel import Nifti1Image
+from sklearn.base import BaseEstimator, TransformerMixin, clone
+from sklearn.externals.joblib import Memory
 from nilearn._utils.niimg_conversions import check_niimg
 from nilearn._utils import CacheMixin
 from nilearn.input_data import NiftiMasker
@@ -100,8 +101,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         on memory consumption. True by default.
 
     """
-    @replace_parameters({'mask': 'mask_img'}, end_version='next')
-    def __init__(self, mask_img=None, smoothing_fwhm=None,
+    def __init__(self, mask=None, smoothing_fwhm=None,
                  memory=Memory(None), memory_level=1, verbose=0,
                  n_jobs=1, minimize_memory=True):
         self.mask_img = mask_img
@@ -389,7 +389,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         # Fit an Ordinary Least Squares regression for parametric statistics
         Y = self.masker_.transform(effect_maps)
-        if self.memory:
+        if self.memory is not None:
             mem_glm = self.memory.cache(run_glm, ignore=['n_jobs'])
         else:
             mem_glm = run_glm
