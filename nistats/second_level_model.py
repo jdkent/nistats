@@ -389,7 +389,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         # Fit an Ordinary Least Squares regression for parametric statistics
         Y = self.masker_.transform(effect_maps)
-        if self.memory is not None:
+        if self.memory:
             mem_glm = self.memory.cache(run_glm, ignore=['n_jobs'])
         else:
             mem_glm = run_glm
