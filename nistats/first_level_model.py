@@ -332,14 +332,14 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         events: pandas Dataframe or string or list of pandas DataFrames or
                    strings
-
+                   
             fMRI events used to build design matrices. One events object
             expected per run_img. Ignored in case designs is not None.
             If string, then a path to a csv file is expected.
 
         confounds: pandas Dataframe or string or list of pandas DataFrames or
                    strings
-
+                   
             Each column in a DataFrame corresponds to a confound variable
             to be included in the regression model of the respective run_img.
             The number of rows must match the number of volumes in the
@@ -509,15 +509,16 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         ----------
         contrast_def : str or array of shape (n_col) or list of (string or
                        array of shape (n_col))
-
+                       
             where ``n_col`` is the number of columns of the design matrix,
             (one array per run). If only one array is provided when there
             are several runs, it will be assumed that the same contrast is
             desired for all runs. The string can be a formula compatible with
-            `pandas.DataFrame.eval`. Basically one can use the name of the
-            conditions as they appear in the design matrix of the fitted model
-            combined with operators +- and combined with numbers with operators
-            +-`*`/.
+            the linear constraint of the Patsy library. Basically one can use
+            the name of the conditions as they appear in the design matrix of
+            the fitted model combined with operators /\*+- and numbers.
+            Please checks the patsy documentation for formula examples:
+            http://patsy.readthedocs.io/en/latest/API-reference.html#patsy.DesignInfo.linear_constraint
 
         stat_type : {'t', 'F'}, optional
             type of the contrast

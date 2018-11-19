@@ -161,6 +161,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             from second_level_input.
             Ensure that the order of maps given by a second_level_input
             list of Niimgs matches the order of the rows in the design matrix.
+
         """
         # Check parameters
         # check first level input
@@ -315,7 +316,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             The string can be a formula compatible with the linear constraint
             of the Patsy library. Basically one can use the name of the
             conditions as they appear in the design matrix of
-            the fitted model combined with operators /*+- and numbers.
+            the fitted model combined with operators /\*+- and numbers.
             Please check the patsy documentation for formula examples:
             http://patsy.readthedocs.io/en/latest/API-reference.html#patsy.DesignInfo.linear_constraint
             The default (None) is accepted if the design matrix has a single
@@ -325,7 +326,7 @@ class SecondLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         first_level_contrast: str or array of shape (n_col) with respect to
                               FirstLevelModel, optional
-
+                              
             In case a list of FirstLevelModel was provided as
             second_level_input, we have to provide a contrast to apply to
             the first level models to get the corresponding list of images
