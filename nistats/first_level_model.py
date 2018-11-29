@@ -624,7 +624,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
 @replace_parameters({'mask': 'mask_img'}, end_version='next')
 def first_level_models_from_bids(
-        dataset_path, task_label, space_label=None, img_filters=None,
+        dataset_path, task_label, space_label, img_filters=None,
         t_r=None, slice_time_ref=0., hrf_model='glover', drift_model='cosine',
         high_pass=.01, drift_order=1, fir_delays=[0], min_onset=-24,
         mask_img=None, target_affine=None, target_shape=None, smoothing_fwhm=None,
