@@ -434,23 +434,6 @@ def test_first_level_models_with_no_signal_scaling():
 
 
 def test_first_level_model_residuals():
-    shapes = [(10, 10, 10, 25)] * 3
-    mask, fmri_data, design_matrices  = generate_fake_fmri_data(shapes)
-
-    print(fmri_data)
-
-    for i in range(len(design_matrices)):
-        design_matrices[i].iloc[:, 0] = 1
-
-    model = FirstLevelModel(mask=mask, minimize_memory=False, noise_model='ols').fit(fmri_data, 
-                                           design_matrices=design_matrices)
-
-    for resid in model.residuals:
-        mean_resids = model.masker_.transform(resid).mean(0)
-        assert_array_almost_equal(mean_resids, 0)
-
-
-def test_first_level_model_residuals():
     shapes = [(10, 10, 10, 100)] * 3
     mask, fmri_data, design_matrices  = generate_fake_fmri_data(shapes)
 

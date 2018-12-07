@@ -23,6 +23,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 from nibabel import Nifti1Image
+from nibabel.onetime import setattr_on_read
 
 from sklearn.base import (BaseEstimator,
                           clone,
@@ -609,15 +610,15 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         else:
             return output
 
-    @property
+    @setattr_on_read
     def residuals(self):
         return self.get_voxelwise_model_attribute_('resid')
 
-    @property
+    @setattr_on_read
     def predicted(self):
         return self.get_voxelwise_model_attribute_('predicted')
 
-    @property
+    @setattr_on_read
     def rsq(self):
         return self.get_voxelwise_model_attribute_('rsq', timeseries=False)
 
