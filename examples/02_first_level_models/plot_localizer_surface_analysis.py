@@ -39,8 +39,6 @@ slice_time_ref = 0.5
 # First the volume-based fMRI data.
 from nistats.datasets import fetch_localizer_first_level
 data = fetch_localizer_first_level()
-paradigm_file = data.paradigm
-paradigm = pd.read_table(paradigm_file)
 fmri_img = data.epi_img
 
 #########################################################################
@@ -169,7 +167,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
     z_score = contrast.z_score()
     # we plot it on the surface, on the inflated fsaverage mesh,
     # together with a suitable background to give an impression
-    # of the cortex folding. 
+    # of the cortex folding.
     plotting.plot_surf_stat_map(
         fsaverage.infl_right, z_score, hemi='right',
         title=contrast_id, colorbar=True,
@@ -178,7 +176,7 @@ for index, (contrast_id, contrast_val) in enumerate(contrasts.items()):
 #########################################################################
 # Analysing the left hemisphere
 # -----------------------------
-# 
+#
 # Note that it requires little additional code!
 
 #########################################################################
