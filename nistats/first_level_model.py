@@ -629,9 +629,6 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
             output.append(self.masker_.inverse_transform(voxelwise_attribute))
 
-        if len(output) == 1:
-            return output[0]
-        else:
             return output
 
     @setattr_on_read
