@@ -22,7 +22,7 @@ create_new_venv() {
     deactivate
     virtualenv --system-site-packages testvenv
     source testvenv/bin/activate
-    pip install nose
+    pip install nose pytest==3.9.1 pytest-cov
 }
 
 print_conda_requirements() {
@@ -111,7 +111,6 @@ elif [[ "$DISTRIB" == "conda" ]]; then
         pip install boto3
     fi
     pip install nilearn
-
 
 else
     echo "Unrecognized distribution ($DISTRIB); cannot setup travis environment."

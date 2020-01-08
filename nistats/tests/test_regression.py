@@ -4,12 +4,13 @@ Test functions for models.regression
 
 import numpy as np
 
-from nose.tools import assert_equal
-
-from nose.tools import assert_equal, assert_true, assert_almost_equal
-from numpy.testing import assert_array_almost_equal, assert_array_equal
+from numpy.testing import (assert_array_almost_equal,
+                           assert_almost_equal,
+                           assert_array_equal,
+                           )
 
 from nistats.regression import OLSModel, ARModel
+
 
 RNG = np.random.RandomState(20110902)
 X = RNG.standard_normal((40, 10))
@@ -19,17 +20,17 @@ Y = RNG.standard_normal((40,))
 def test_OLS():
     model = OLSModel(design=X)
     results = model.fit(Y)
-    assert_equal(results.df_resid, 30)
-    assert_equal(results.resid.shape[0], 40)
-    assert_equal(results.predicted.shape[0], 40)
+    assert results.df_resid == 30
+    assert results.resid.shape[0] == 40
+    assert results.predicted.shape[0] == 40
 
 
 def test_AR():
     model = ARModel(design=X, rho=0.4)
     results = model.fit(Y)
-    assert_equal(results.df_resid, 30)
-    assert_equal(results.resid.shape[0], 40)
-    assert_equal(results.predicted.shape[0], 40)
+    assert results.df_resid == 30
+    assert results.resid.shape[0] == 40
+    assert results.predicted.shape[0] == 40
 
 
 def test_residuals():
@@ -37,7 +38,7 @@ def test_residuals():
 
     # If design matrix contains an intercept, the
     # mean of the residuals should be 0 (short of
-    # some numerical rounding errors) 
+    # some numerical rounding errors)
     Xintercept[:, 0] = 1
     model = OLSModel(design=Xintercept)
     results = model.fit(Y)
@@ -63,7 +64,7 @@ def test_OLS_degenerate():
     Xd[:, 0] = Xd[:, 1] + Xd[:, 2]
     model = OLSModel(design=Xd)
     results = model.fit(Y)
-    assert_equal(results.df_resid, 31)
+    assert results.df_resid == 31
 
 
 def test_AR_degenerate():
@@ -71,4 +72,4 @@ def test_AR_degenerate():
     Xd[:, 0] = Xd[:, 1] + Xd[:, 2]
     model = ARModel(design=Xd, rho=0.9)
     results = model.fit(Y)
-    assert_equal(results.df_resid, 31)
+    assert results.df_resid == 31
