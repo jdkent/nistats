@@ -12,13 +12,9 @@ Also, the predicted time series can be extracted, which is useful to assess the 
 # Import modules
 # --------------
 from nistats.datasets import fetch_spm_auditory
-from nilearn import input_data, image
-import matplotlib.pyplot as plt
-from nilearn import plotting, masking
-from nistats.reporting import get_clusters_table
-from nistats.first_level_model import FirstLevelModel
+from nilearn import image
+from nilearn import masking
 import pandas as pd
-import numpy as np
 
 
 # load fMRI data
@@ -44,6 +40,7 @@ events = pd.read_table(subject_data['events'])
 # stores the residuals.
 # `signal_scaling` is set to False, so we keep the same scaling as the
 # original data in `fmri_img`.
+from nistats.first_level_model import FirstLevelModel
 
 fmri_glm = FirstLevelModel(t_r=7,
                            drift_model='cosine',
@@ -57,6 +54,8 @@ fmri_glm = fmri_glm.fit(fmri_img, events)
 #########################################################################
 # Calculate and plot contrast
 # ---------------------------
+from nilearn import plotting
+
 z_map = fmri_glm.compute_contrast('active - rest')
 
 plotting.plot_stat_map(z_map, bg_img=mean_img, threshold=3.1)
@@ -64,6 +63,8 @@ plotting.plot_stat_map(z_map, bg_img=mean_img, threshold=3.1)
 #########################################################################
 # Extract the largest clusters
 # ----------------------------
+from nistats.reporting import get_clusters_table
+from nilearn import input_data
 
 table = get_clusters_table(z_map, stat_threshold=3.1,
                            cluster_threshold=20).set_index('Cluster ID', drop=True)
@@ -78,6 +79,8 @@ predicted_timeseries = masker.fit_transform(fmri_glm.predicted)
 #########################################################################
 # Plot predicted and actual time series for 6 most significant clusters
 # ---------------------------------------------------------------------
+import matplotlib.pyplot as plt
+
 for i in range(1, 7):
     plt.subplot(2, 3, i)
     plt.title('Cluster peak {}\n'.format(table.loc[i, ['X', 'Y', 'Z']].tolist()))
@@ -137,6 +140,8 @@ plotting.plot_stat_map(fmri_glm.r_square,
 # the active and rest conditions together. This is different from R-squared,
 # which tells you how well the overall GLM fits the data, including active, rest
 # and all the other columns in the design matrix such as drift and motion.
+import numpy as np
+
 design_matrix = fmri_glm.design_matrices_[0]
 active = np.array([1 if c == 'active' else 0 for c in design_matrix.columns])
 rest = np.array([1 if c == 'rest' else 0 for c in design_matrix.columns])
