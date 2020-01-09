@@ -162,8 +162,10 @@ rest = np.array([1 if c == 'rest' else 0 for c in design_matrix.columns])
 
 effects_of_interest = np.vstack((active, rest))
 # f-test for rest and activity
-z_map_ftest = fmri_glm.compute_contrast(effects_of_interest,
-                                  output_type='z_score')
+z_map_ftest = fmri_glm.compute_contrast(
+    effects_of_interest,
+    stat_type='F',
+    output_type='z_score')
 
 plotting.plot_stat_map(z_map_ftest,
                        bg_img=mean_img, threshold=3.1, display_mode='z', cut_coords=7)
