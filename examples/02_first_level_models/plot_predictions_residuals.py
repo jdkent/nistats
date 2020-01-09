@@ -70,10 +70,13 @@ table = get_clusters_table(z_map, stat_threshold=3.1,
                            cluster_threshold=20).set_index('Cluster ID', drop=True)
 table.head()
 
-masker = input_data.NiftiSpheresMasker(table.loc[range(1, 7), ['X', 'Y', 'Z']].values)
+# get the 6 largest clusters' max x, y, and z coordinates
+coords = table.loc[range(1, 7), ['X', 'Y', 'Z']].values
 
+# extract time series from each coordinate
+masker = input_data.NiftiSpheresMasker(coords)
 real_timeseries = masker.fit_transform(fmri_img)
-predicted_timeseries = masker.fit_transform(fmri_glm.predicted)
+predicted_timeseries = masker.fit_transform(fmri_glm.predicted[0])
 
 
 #########################################################################
@@ -81,37 +84,44 @@ predicted_timeseries = masker.fit_transform(fmri_glm.predicted)
 # ---------------------------------------------------------------------
 import matplotlib.pyplot as plt
 
-for i in range(1, 7):
-    plt.subplot(2, 3, i)
-    plt.title('Cluster peak {}\n'.format(table.loc[i, ['X', 'Y', 'Z']].tolist()))
-    plt.plot(real_timeseries[:, i-1], c='k', lw=2)
-    plt.plot(predicted_timeseries[:, i-1], c='r',  ls='--', lw=2)
-    plt.xlabel('Time')
-    plt.ylabel('Signal intensity')
+# colors for each of the clusters
+colors = ['blue', 'navy', 'purple', 'magenta', 'olive', 'teal']
+# plot the time series and corresponding locations
+fig1, axs1 = plt.subplots(2, 6)
+for i in range(0, 6):
+    # plotting time series
+    axs1[0, i].set_title('Cluster peak {}\n'.format(coords[i]))
+    axs1[0, i].plot(real_timeseries[:, i], c=colors[i], lw=2)
+    axs1[0, i].plot(predicted_timeseries[:, i], c='r',  ls='--', lw=2)
+    axs1[0, i].set_xlabel('Time')
+    axs1[0, i].set_ylabel('Signal intensity', labelpad=0)
+    # plotting image below the time series
+    roi_img = plotting.plot_stat_map(
+        z_map, cut_coords=[coords[i][2]], threshold=3.1, figure=fig1,
+        axes=axs1[1, i], display_mode='z', colorbar=False, bg_img=mean_img)
+    roi_img.add_markers([coords[i]], colors[i], 300)
+fig1.set_size_inches(24, 14)
 
-plt.gcf().set_size_inches(12, 7)
-plt.tight_layout()
 
 #########################################################################
 # Get residuals
 # -------------
-resid = masker.fit_transform(fmri_glm.residuals)
+resid = masker.fit_transform(fmri_glm.residuals[0])
 
 
 #########################################################################
 # Plot distribution of residuals
 # ------------------------------
 # Note that residuals are not really distributed normally.
+fig2, axs2 = plt.subplots(2, 3)
+axs2 = axs2.flatten()
+for i in range(0, 6):
+    axs2[i].set_title('Cluster peak {}\n'.format(coords[i]))
+    axs2[i].hist(resid[:, i], color=colors[i])
+    print('Mean residuals: {}'.format(resid[:, i].mean()))
 
-
-for i in range(1, 7):
-    plt.subplot(2, 3, i)
-    plt.title('Cluster peak {}\n'.format(table.loc[i, ['X', 'Y', 'Z']].tolist()))
-    plt.hist(resid[:, i-1])
-    print('Mean residuals: {}'.format(resid[:, i-1].mean()))
-
-plt.gcf().set_size_inches(12, 7)
-plt.tight_layout()
+fig2.set_size_inches(12, 7)
+fig2.tight_layout()
 
 
 #########################################################################
@@ -129,7 +139,7 @@ plt.tight_layout()
 # or because the voxel/region fits the noise factors (such as drift or motion)
 # that could be present in the GLM. To isolate the influence of the experiment,
 # we can use an F-test as shown in the next section.
-plotting.plot_stat_map(fmri_glm.r_square, 
+plotting.plot_stat_map(fmri_glm.r_square[0],
                        bg_img=mean_img, threshold=.1, display_mode='z', cut_coords=7)
 
 
@@ -143,12 +153,17 @@ plotting.plot_stat_map(fmri_glm.r_square,
 import numpy as np
 
 design_matrix = fmri_glm.design_matrices_[0]
-active = np.array([1 if c == 'active' else 0 for c in design_matrix.columns])
-rest = np.array([1 if c == 'rest' else 0 for c in design_matrix.columns])
-effects_of_interest = np.vstack((active, rest))
 
-z_map = fmri_glm.compute_contrast(effects_of_interest,
+# contrast with a one for "active" and zero everywhere else
+active = np.array([1 if c == 'active' else 0 for c in design_matrix.columns])
+
+# contrast with a one for "rest" and zero everywhere else
+rest = np.array([1 if c == 'rest' else 0 for c in design_matrix.columns])
+
+effects_of_interest = np.vstack((active, rest))
+# f-test for rest and activity
+z_map_ftest = fmri_glm.compute_contrast(effects_of_interest,
                                   output_type='z_score')
 
-plotting.plot_stat_map(z_map, 
-                       bg_img=mean_img, threshold=2.33, display_mode='z', cut_coords=7)
+plotting.plot_stat_map(z_map_ftest,
+                       bg_img=mean_img, threshold=3.1, display_mode='z', cut_coords=7)
