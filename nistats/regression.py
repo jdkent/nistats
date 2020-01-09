@@ -333,15 +333,13 @@ class RegressionResults(LikelihoodModelResults):
         return self.SSE / self.df_resid
 
 
-class SimpleRegressionResults(RegressionResults):
+class SimpleRegressionResults(LikelihoodModelResults):
     """This class contains only information of the model fit necessary
     for contast computation.
-
     Its intended to save memory when details of the model are unnecessary.
     """
     def __init__(self, results):
         """See LikelihoodModelResults constructor.
-
         The only difference is that the whitened Y and residual values
         are stored for a regression model.
         """
@@ -355,19 +353,37 @@ class SimpleRegressionResults(RegressionResults):
         # put this as a parameter of LikelihoodModel
         self.df_resid = self.df_total - self.df_model
 
-        self.wdesign = results.model.wdesign
-
     def logL(self, Y):
         """
         The maximized log-likelihood
         """
-        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+        raise ValueError('can not use this method for simple results')
 
-    def resid(self):
+    def resid(self, Y):
         """
         Residuals from the fit.
         """
-        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+        return Y - self.predicted
 
-    def norm_resid(self):
-        raise ValueError('minimize_memory should be set to False to make residuals or predictions.')
+    def norm_resid(self, Y):
+        """
+        Residuals, normalized to have unit length.
+        Notes
+        -----
+        Is this supposed to return "stanardized residuals,"
+        residuals standardized
+        to have mean zero and approximately unit variance?
+        d_i = e_i / sqrt(MS_E)
+        Where MS_E = SSE / (n - k)
+        See: Montgomery and Peck 3.2.1 p. 68
+             Davidson and MacKinnon 15.2 p 662
+        """
+        return self.resid(Y) * positive_reciprocal(np.sqrt(self.dispersion))
+
+    def predicted(self):
+        """ Return linear predictor values from a design matrix.
+        """
+        beta = self.theta
+        # the LikelihoodModelResults has parameters named 'theta'
+        X = self.model.design
+        return np.dot(X, beta)
