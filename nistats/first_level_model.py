@@ -37,6 +37,7 @@ from .design_matrix import make_first_level_design_matrix
 from .regression import (ARModel,
                          OLSModel,
                          SimpleRegressionResults,
+                         RegressionResults
                          )
 from .utils import (_basestring,
                     _check_run_tables,
@@ -585,7 +586,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         return outputs if output_type == 'all' else output
 
-    def get_voxelwise_model_attribute_(self, attribute, result_as_time_series=True):
+    def _get_voxelwise_model_attribute(self, attribute, result_as_time_series=True):
         """Transform RegressionResults instances within a dictionary
         (whose keys represent the autoregressive coefficient under the 'ar1'
         noise model or only 0.0 under 'ols' noise_model and values are the
@@ -594,7 +595,9 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         Parameters
         ----------
         attribute : str
-            an attribute of a RegressionResults instance
+            an attribute of a RegressionResults instance.
+            possible values include: resid, norm_resid, predicted,
+            SSE, r_square, MSE.
         result_as_time_series : bool, optional
             whether the RegressionResult attribute has a value
             per timepoint of the input nifti image.
@@ -604,6 +607,13 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
+        # check if valid attribute is being accessed.
+        all_attributes = dict(vars(RegressionResults)).keys()
+        possible_attributes = [prop for prop in all_attributes if '__' not in prop]
+        if attribute not in possible_attributes:
+            msg = "attribute must be one of: {attr}".format(attr=possible_attributes)
+            raise ValueError(msg)
+
         if self.minimize_memory:
             raise ValueError('To access voxelwise attributes like R-squared, residuals, '
                     'and predictions, the `FirstLevelModel`-object needs to store '
@@ -640,7 +650,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
-        return self.get_voxelwise_model_attribute_('resid')
+        return self._get_voxelwise_model_attribute('resid')
 
     @setattr_on_read
     def predicted(self):
@@ -652,7 +662,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
-        return self.get_voxelwise_model_attribute_('predicted')
+        return self._get_voxelwise_model_attribute('predicted')
 
     @setattr_on_read
     def r_square(self):
@@ -664,7 +674,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
-        return self.get_voxelwise_model_attribute_('r_square', result_as_time_series=False)
+        return self._get_voxelwise_model_attribute('r_square', result_as_time_series=False)
 
 
 @replace_parameters({'mask': 'mask_img'}, end_version='next')
