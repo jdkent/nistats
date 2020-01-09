@@ -336,10 +336,12 @@ class RegressionResults(LikelihoodModelResults):
 class SimpleRegressionResults(LikelihoodModelResults):
     """This class contains only information of the model fit necessary
     for contast computation.
+
     Its intended to save memory when details of the model are unnecessary.
     """
     def __init__(self, results):
         """See LikelihoodModelResults constructor.
+
         The only difference is that the whitened Y and residual values
         are stored for a regression model.
         """
@@ -373,8 +375,11 @@ class SimpleRegressionResults(LikelihoodModelResults):
         Is this supposed to return "stanardized residuals,"
         residuals standardized
         to have mean zero and approximately unit variance?
+
         d_i = e_i / sqrt(MS_E)
+
         Where MS_E = SSE / (n - k)
+
         See: Montgomery and Peck 3.2.1 p. 68
              Davidson and MacKinnon 15.2 p 662
         """
