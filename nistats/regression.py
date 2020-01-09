@@ -370,6 +370,7 @@ class SimpleRegressionResults(LikelihoodModelResults):
     def norm_resid(self, Y):
         """
         Residuals, normalized to have unit length.
+
         Notes
         -----
         Is this supposed to return "stanardized residuals,"
