@@ -586,7 +586,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         return outputs if output_type == 'all' else output
 
-    def _get_voxelwise_model_attribute(self, attribute, result_as_time_series=True):
+    def _get_voxelwise_model_attribute(self, attribute, result_as_time_series):
         """Transform RegressionResults instances within a dictionary
         (whose keys represent the autoregressive coefficient under the 'ar1'
         noise model or only 0.0 under 'ols' noise_model and values are the
@@ -598,7 +598,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
             an attribute of a RegressionResults instance.
             possible values include: resid, norm_resid, predicted,
             SSE, r_square, MSE.
-        result_as_time_series : bool, optional
+        result_as_time_series : bool
             whether the RegressionResult attribute has a value
             per timepoint of the input nifti image.
 
@@ -650,7 +650,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
-        return self._get_voxelwise_model_attribute('resid')
+        return self._get_voxelwise_model_attribute('resid', result_as_time_series=True)
 
     @setattr_on_read
     def predicted(self):
@@ -662,7 +662,7 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
         output : list
             a list of Nifti1Image(s)
         """
-        return self._get_voxelwise_model_attribute('predicted')
+        return self._get_voxelwise_model_attribute('predicted', result_as_time_series=True)
 
     @setattr_on_read
     def r_square(self):
