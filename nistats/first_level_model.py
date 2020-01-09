@@ -601,9 +601,8 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         Returns
         -------
-        output : list or Nifti1Image
-            a list of Nifti1Images if FirstLevelModel is fit with
-            a list of Nifti1Images, or a single Nifti1Image otherwise.
+        output : list
+            a list of Nifti1Image(s)
         """
         if self.minimize_memory:
             raise ValueError('To access voxelwise attributes like R-squared, residuals, '
@@ -638,9 +637,8 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         Returns
         -------
-        output : list or Nifti1Image
-            a list of Nifti1Images if FirstLevelModel is fit with
-            a list of Nifti1Images, or a single Nifti1Image otherwise.
+        output : list
+            a list of Nifti1Image(s)
         """
         return self.get_voxelwise_model_attribute_('resid')
 
@@ -651,9 +649,8 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         Returns
         -------
-        output : list or Nifti1Image
-            a list of Nifti1Images if FirstLevelModel is fit with
-            a list of Nifti1Images, or a single Nifti1Image otherwise.
+        output : list
+            a list of Nifti1Image(s)
         """
         return self.get_voxelwise_model_attribute_('predicted')
 
@@ -664,9 +661,8 @@ class FirstLevelModel(BaseEstimator, TransformerMixin, CacheMixin):
 
         Returns
         -------
-        output : list or Nifti1Image
-            a list of Nifti1Images if FirstLevelModel is fit with
-            a list of Nifti1Images, or a single Nifti1Image otherwise.
+        output : list
+            a list of Nifti1Image(s)
         """
         return self.get_voxelwise_model_attribute_('r_square', result_as_time_series=False)
 
